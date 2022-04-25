@@ -25,8 +25,8 @@ namespace Binance_Example
         {
             InitializeComponent();
         }
-        private string apiKey = "rH7bAyC2deozqWXYFrSCikoCfkxVjkeyvthppiUTnvSZyiFbcHdnXIyTgiauWFSk";//"8EW31T8PJKG14M1U5WLPVz7PTpy6OdQplbHEh1n9sMqPZfTY2O3t6CpAG5x49LRP";
-        private string apiSecret = "AnyqX8c9NqPu0YhQOuzzQPpsH52fRdZ7zTvFg6wfCxQdCnlsW8J3aq87hqfi8qsl";//"XSE4AXN198B2przYws4JuDyWvAdoIbxrluA0IGsHAk47T2yqzlcLvRYJkWRapnuM";
+        private string apiKey = /*"rH7bAyC2deozqWXYFrSCikoCfkxVjkeyvthppiUTnvSZyiFbcHdnXIyTgiauWFSk";*/"8EW31T8PJKG14M1U5WLPVz7PTpy6OdQplbHEh1n9sMqPZfTY2O3t6CpAG5x49LRP";
+        private string apiSecret =/* "AnyqX8c9NqPu0YhQOuzzQPpsH52fRdZ7zTvFg6wfCxQdCnlsW8J3aq87hqfi8qsl";*/"XSE4AXN198B2przYws4JuDyWvAdoIbxrluA0IGsHAk47T2yqzlcLvRYJkWRapnuM";
         private BinanceSocketClient socketClient = new BinanceSocketClient() { };
 
         private object orderLock;// нужен для блокировки процесса 
@@ -243,18 +243,15 @@ namespace Binance_Example
                 entry = false;
             }
 
-            using (var client = new BinanceClient() )
+            using (var client = new BinanceClient())
             {
-                
-                var ordersucess = false;
 
-                if (entry)
-                    ordersucess = (await client.UsdFuturesApi.Trading.PlaceOrderAsync(Symbol, SellRadio.IsChecked == true ? OrderSide.Sell : OrderSide.Buy, FuturesOrderType.Market, quantity: decimal.Parse(Volume.Text))).Success;
 
-                if (ordersucess || !entry)
+                var ordersucess = (await client.UsdFuturesApi.Trading.PlaceOrderAsync(Symbol, SellRadio.IsChecked == true ? OrderSide.Sell : OrderSide.Buy, FuturesOrderType.Market, quantity: decimal.Parse(Volume.Text))).Success;
+
+                if (ordersucess)
                 {
                     stopStrategies.ToList().ForEach(s => s.Start());
-                    
                 }
                 else
                 {

@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace Binance_Example
 {
@@ -19,11 +20,11 @@ namespace Binance_Example
     {
         Buy, Sell
     }
-    public class MiniStopStrategy:ObservableObject
+    public class MiniStopStrategy : ObservableObject
     {
         public Instrument Instrument { get; set; }
 
-        public Direction Direction { get;set;}
+        public Direction Direction { get; set; }
 
         /// <summary>
         /// Уровень установки стопа
@@ -61,6 +62,11 @@ namespace Binance_Example
 
         public decimal PunktsForLevel2 { get; set; }
 
+        public TextBox TextLog { get; set; }
+
+        public int Id { get; set; }
+       
+
         /// <summary>
         /// Ожидать стопа, который сработает в другую сторону 
         /// </summary>
@@ -88,13 +94,33 @@ namespace Binance_Example
             PunktsForLevel2 = miniStopStrategy.PunktsForLevel2;
             Direction = miniStopStrategy.Direction;
             Comission = miniStopStrategy.Comission;
+            Id = miniStopStrategy.Id;
 
         }
 
-        public void Stop()
+        public async void Stop()
         {
-            StrategyOn = false;
-            Instrument.PropertyChanged -= CheckConditions;
+           
+                StrategyOn = false;
+
+                try
+                {
+                    if (stoporderid != 0)
+                        using (var client = new BinanceClient())
+                        {
+                            var subOkay = await client.UsdFuturesApi.Trading.CancelOrderAsync(Instrument.Code, orderId: stoporderid);
+
+                            if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ордер не получилось отменить", Id), TextLog);
+
+                        }
+                }
+                catch (Exception ex)
+                {
+                    MainWindow.LogMessage(String.Format("{0} Ошибка отмены ордера {1}", Id, ex.ToString), TextLog);
+                }
+
+                Instrument.PropertyChanged -= CheckConditions;
+            
         }
 
         public void StartChild(bool special = false)
@@ -124,9 +150,15 @@ namespace Binance_Example
         public async void Start()
         {
 
+            var startText = string.Format("{0} Добавлен стоп {1} цена стопа {2} цена условия {3} второй стоп {4}", Id,Direction, StopLevel, LevelActivator, NewStopLevel);
+            MainWindow.LogMessage(startText, TextLog);
+
             using (var client = new BinanceClient())
             {
                 var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
+
+                if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ошибка подписки на обновление ордеров", Id), TextLog);
+            
             }
 
             if (!WaitForEntryStop) // классический старт
@@ -154,12 +186,13 @@ namespace Binance_Example
 
                         if (!WaitForEntryStop)
                         {
-                            Debug.WriteLine("Начинаем проверять условия");
+                            
+                            MainWindow.LogMessage(string.Format("{0} Начинаем проверять условия", Id), TextLog);
                             CheckConditions();
                         }
                         else
                         {
-                            Debug.WriteLine("Останавливаем и запускаем новую");
+                            MainWindow.LogMessage(string.Format("{0} Останавливаем и запускаем новую", Id), TextLog);
                             Stop();
                             //создаем новую мини стоп бот стратегию, но уже с классическим 
                             StartChild();
@@ -184,10 +217,14 @@ namespace Binance_Example
                 if (result.Success)
                 {
                     stoporderid = result.Data.Id;
-                    Debug.WriteLine("Stop order placed!", "Sucess"); 
+                    //Debug.WriteLine("Stop order placed!", "Sucess");
+                    MainWindow.LogMessage(string.Format("{0} Стоп ордеру успешно размещен {1} {2}", Id, result.Data.PositionSide, result.Data.Price), TextLog);
                 }
                 else
-                    Debug.WriteLine($"Order placing failed: {result.Error.Message}", "Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                {
+                    MainWindow.LogMessage(string.Format("{0} !Ордер не выставлен! {1} {2} opposite:{3}", Id, Direction,StopLevel, WaitForEntryStop), TextLog);
+                    //Debug.WriteLine($"Order placing failed: {result.Error.Message}", "Failed", MessageBoxButton.OK, MessageBoxImage.Error); 
+                }
 
             }
         }
@@ -198,26 +235,35 @@ namespace Binance_Example
             Instrument.PropertyChanged += CheckConditions;
         }
 
+        decimal lastprice = 0;
         ///проверка основных условий 
         private void CheckConditions(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             lock (locker)
             {
                 if (!StrategyOn) return;
-
+               
                 var price = Instrument.LastPrice;
+
+                if (lastprice == price) return;
+                lastprice= price;
+
                 Debug.Print("Отслеживаем условия {0}", price);
 
                 if (Direction == Direction.Buy && price > LevelActivator)
                 {
-                    Debug.Print("Сработало условие {0}", LevelActivator);
+                    Debug.Print("Сработало условие. Цена выше уровня {0}", LevelActivator);
+                    MainWindow.LogMessage(string.Format("{0} Сработало условие. Цена выше уровня {0}", Id, LevelActivator), TextLog);
+
                     Stop();
                     StartChild(true);
                 }
 
                 if (Direction == Direction.Sell && price < LevelActivator)
                 {
-                    Debug.Print("Сработало условие {0}", LevelActivator);
+                    Debug.Print("Сработало условие. Цена ниже уровня {0}", LevelActivator);
+                    MainWindow.LogMessage(string.Format("{0} Сработало условие. Цена ниже уровня {0}", Id, LevelActivator), TextLog);
+
                     Stop();
                     StartChild(true);
 

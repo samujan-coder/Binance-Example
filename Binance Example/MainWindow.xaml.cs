@@ -2,17 +2,15 @@
 using System.Threading.Tasks;
 using System.Windows;
 using Binance.Net.Clients;
-using Binance.Net.Objects.Models.Spot.Socket;
 using Binance.Net.Objects;
 using CryptoExchange.Net.Authentication;
-using CryptoExchange.Net.Sockets;
 using System.Diagnostics;
 using System.Collections.ObjectModel;
 using Binance.Net.Enums;
-using System.Linq;
-using Binance.Net.Objects.Models.Futures.Socket;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Windows.Controls;
 
 namespace Binance_Example
 {
@@ -24,12 +22,14 @@ namespace Binance_Example
         public MainWindow()
         {
             InitializeComponent();
+            ReadKeys();
+            LogTextBox.ScrollToEnd();
+           
         }
-        private string apiKey = /*"rH7bAyC2deozqWXYFrSCikoCfkxVjkeyvthppiUTnvSZyiFbcHdnXIyTgiauWFSk";*/"8EW31T8PJKG14M1U5WLPVz7PTpy6OdQplbHEh1n9sMqPZfTY2O3t6CpAG5x49LRP";
-        private string apiSecret =/* "AnyqX8c9NqPu0YhQOuzzQPpsH52fRdZ7zTvFg6wfCxQdCnlsW8J3aq87hqfi8qsl";*/"XSE4AXN198B2przYws4JuDyWvAdoIbxrluA0IGsHAk47T2yqzlcLvRYJkWRapnuM";
+        private string apiKey;//= /*"rH7bAyC2deozqWXYFrSCikoCfkxVjkeyvthppiUTnvSZyiFbcHdnXIyTgiauWFSk";*/"8EW31T8PJKG14M1U5WLPVz7PTpy6OdQplbHEh1n9sMqPZfTY2O3t6CpAG5x49LRP";
+        private string apiSecret;//=/* "AnyqX8c9NqPu0YhQOuzzQPpsH52fRdZ7zTvFg6wfCxQdCnlsW8J3aq87hqfi8qsl";*/"XSE4AXN198B2przYws4JuDyWvAdoIbxrluA0IGsHAk47T2yqzlcLvRYJkWRapnuM";
         private BinanceSocketClient socketClient = new BinanceSocketClient() { };
 
-        private object orderLock;// нужен для блокировки процесса 
 
         private string Symbol { get => (string)Instruments.SelectedItem; }
         private decimal lastprice;
@@ -41,7 +41,37 @@ namespace Binance_Example
         public ObservableCollection<MiniStopStrategy> stopStrategies { get; set; } = new ObservableCollection<MiniStopStrategy>() { };
 
         public ObservableCollection<Instrument> SpecialInstruments { get; set; } = new ObservableCollection<Instrument>() { };
-        
+
+        private string directory =/* @"C:\log\" +*/ DateTime.Now.ToString("HH_mm_dd_MM_yyyy") + ".txt";
+
+
+        private void ReadKeys()
+        {
+            try
+            {
+                string[] lines = File.ReadAllLines("api.txt");
+
+                apiKey = lines[0];
+                apiSecret = lines[1];
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+        }
+
+
+
+        public async static void LogMessage(string message, TextBox LogTextBox)
+        {
+            var logmessage = DateTime.Now + " | " + message;
+            LogTextBox.AppendText(logmessage + Environment.NewLine);
+            var logger = new StreamWriter(DateTime.Now.ToString("dd_MM_yyyy") + ".txt", true);
+            logger.WriteLineAsync(logmessage);
+            logger.Close();
+
+        }
+
         /// <summary>
         /// сразу возвращает готовый подписанный инструмент 
         /// </summary>
@@ -78,6 +108,8 @@ namespace Binance_Example
                     var listinstruments = new List<string>();
                     result.Data.ToList().ForEach(item => listinstruments.Add(item.Symbol));
                     Instruments.ItemsSource = listinstruments;
+
+                    LogMessage("Подписка на инструменты успешно",LogTextBox);
                 }
                 else
                     MessageBox.Show($"Error requesting data: {result.Error.Message}", "error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -111,42 +143,8 @@ namespace Binance_Example
                     MessageBox.Show($"Error starting user stream: {startOkay.Error.Message}", "error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
-                else Debug.WriteLine("Успешное подключение!");
+                else Debug.WriteLine("Ошибка подключения!");
 
-
-                //подписка на событие изменени ордеров и обновления балансов СПОТ
-                // var subOkay = await socketClient.SpotStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, OnOrderUpdate, null, OnAccountUpdate, null);
-                // var subOkay = await socketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data,
-                var subOkay = await socketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data,
-                    leverage =>
-                    {
-                        Debug.Print("Levarage {0}", leverage.Data.LeverageUpdateData.Leverage);
-                    },
-                    marginupdate =>
-                    {
-                        Debug.Print("margin {0}", marginupdate.Data.Positions.FirstOrDefault());// первая из списка позиция 
-                    },
-                    accountupdate =>
-                    {
-                        Debug.Print("account {0}", accountupdate.Data.UpdateData.Balances.FirstOrDefault());//первый баланс из списка
-                    },
-                    orderupdate =>
-                    {
-                        Debug.WriteLine("New info about orders {0}", orderupdate.Data.UpdateData.TradeId);
-                        Debug.Print("order update {0} {1}", orderupdate.Data.UpdateData.Price, orderupdate.Data.UpdateData.Quantity);
-                    },
-                    keyexpired =>
-                    {
-
-                    }, new System.Threading.CancellationToken());
-
-                if (!subOkay.Success)
-                {
-                    MessageBox.Show($"Error subscribing to user stream: {subOkay.Error.Message}", "error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                //получение информации по балансам
                 // var accountResult = await client.SpotApi.Account.GetAccountInfoAsync();//спотовый рынок 
                 var accountResult = await client.UsdFuturesApi.Account.GetAccountInfoAsync();//фьючерсный рынок 
 
@@ -156,7 +154,7 @@ namespace Binance_Example
                     //Assets = new ObservableCollection<AssetViewModel>(accountResult.Data.Balances.Where(b => b.Available != 0 || b.Locked != 0).Select(b => new AssetViewModel() { Asset = b.Asset, Free = b.Available, Locked = b.Locked }).ToList());
                     //фьючерсный 
                     Assets = new ObservableCollection<AssetViewModel>(accountResult.Data.Assets.Where(b => b.AvailableBalance != 0).Select(b => new AssetViewModel() { Asset = b.Asset, Free = b.AvailableBalance }).ToList());
-                    foreach (var asset in Assets) Debug.WriteLine("{0} {1} {2}", asset.Asset, asset.Free, asset.Locked);
+                    foreach (var asset in Assets) LogMessage( string.Format("{0} {1} {2}", asset.Asset, asset.Free, asset.Locked),LogTextBox);
                 }
                 else
                     MessageBox.Show($"Error requesting account info: {accountResult.Error.Message}", "error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -181,15 +179,9 @@ namespace Binance_Example
         }
         private async void Cancel_Click(object sender, RoutedEventArgs e)
         {
+
+            stopStrategies.ToList().ForEach(s => s.Stop());
             stopStrategies.Clear();
-            using (var client = new BinanceClient())
-            {
-                var result = await client.UsdFuturesApi.Trading.CancelAllOrdersAsync(Symbol, null, new System.Threading.CancellationToken());
-                if (result.Success)
-                    MessageBox.Show("All Canceled", "Sucess", MessageBoxButton.OK, MessageBoxImage.Information);
-                else
-                    MessageBox.Show($"Failed to cancel : {result.Error.Message}", "Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
 
         private async void StopOrder_Click(object sender, RoutedEventArgs e)
@@ -208,20 +200,6 @@ namespace Binance_Example
             }
         }
 
-        private async void PlaceStopOrder(decimal price)
-        {
-            using (var client = new BinanceClient())
-            {
-                var stopprice = Math.Abs(lastprice * 0.98m); //2%
-
-                var result = await client.UsdFuturesApi.Trading.PlaceOrderAsync(Symbol, OrderSide.Sell, FuturesOrderType.StopMarket, (decimal?)10, stopPrice: lastprice - 0.0005m, timeInForce: TimeInForce.GoodTillCanceled);
-                if (result.Success)
-                    MessageBox.Show("Stop order placed!", "Sucess", MessageBoxButton.OK, MessageBoxImage.Information);
-                else
-                    MessageBox.Show($"Order placing failed: {result.Error.Message}", "Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            }
-        }
 
         /// <summary>
         /// Старт стратегии 
@@ -246,17 +224,8 @@ namespace Binance_Example
             using (var client = new BinanceClient())
             {
 
-
-                var ordersucess = (await client.UsdFuturesApi.Trading.PlaceOrderAsync(Symbol, SellRadio.IsChecked == true ? OrderSide.Sell : OrderSide.Buy, FuturesOrderType.Market, quantity: decimal.Parse(Volume.Text))).Success;
-
-                if (ordersucess)
-                {
-                    stopStrategies.ToList().ForEach(s => s.Start());
-                }
-                else
-                {
-                    MessageBox.Show("Нет условий для входа, либо заявка не исполнилась");
-                }
+               var ordersucess = (await client.UsdFuturesApi.Trading.PlaceOrderAsync(Symbol, SellRadio.IsChecked == true ? OrderSide.Sell : OrderSide.Buy, FuturesOrderType.Market, quantity: decimal.Parse(Volume.Text))).Success;
+               stopStrategies.ToList().ForEach(s => s.Start());
 
             }
         }
@@ -287,6 +256,45 @@ namespace Binance_Example
 
         }
 
+        private void Button_Click_2(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string[] lines = File.ReadAllLines("stops.txt");
 
+                for (int i = 1; i < lines.Count(); i++)
+                {
+                    string [] variables  = lines[i].Split(";");
+                    Direction direction = variables[0] == "Buy" ? Direction.Buy : Direction.Sell;
+                    var stoplevel = decimal.Parse(variables[1]);
+                    var algolevel = decimal.Parse(variables[2]);
+                    var comission = decimal.Parse(variables[3]);
+                    var level2 = decimal.Parse(variables[4]);
+                    var volume = decimal.Parse(variables[5]);
+
+
+                    var stopbot = new MiniStopStrategy(direction,
+                        SelectedInstrument, stoplevel, comission, algolevel)
+                    {
+                        SocketClient = socketClient,
+                        startOkay = startOkay,
+                        Volume = volume,
+                        WaitForEntryStop = false,
+                        PunktsForLevel2 = level2,
+                        TextLog =LogTextBox,
+                        Id=i,
+                    };
+
+                    stopStrategies.Add(stopbot);
+                    var textstop = string.Format("Добавлен стоп {0} цена стопа {1} цена условия {2} второй стоп {3}", stopbot.Direction, stopbot.StopLevel, stopbot.LevelActivator, stopbot.NewStopLevel);
+                    LogMessage(textstop,LogTextBox);
+                }
+            }
+            catch (Exception ex)
+            {
+               MessageBox.Show(ex.ToString());
+            }
+
+        }
     }
 }

@@ -64,11 +64,14 @@ namespace Binance_Example
 
         public async static void LogMessage(string message, TextBox LogTextBox)
         {
-            var logmessage = DateTime.Now + " | " + message;
-            LogTextBox.AppendText(logmessage + Environment.NewLine);
-            var logger = new StreamWriter(DateTime.Now.ToString("dd_MM_yyyy") + ".txt", true);
-            logger.WriteLineAsync(logmessage);
-            logger.Close();
+            LogTextBox.Dispatcher.Invoke(() =>
+            {
+                var logmessage = DateTime.Now + " | " + message;
+                LogTextBox.AppendText(logmessage + Environment.NewLine);
+                var logger = new StreamWriter(DateTime.Now.ToString("dd_MM_yyyy") + ".txt", true);
+                logger.WriteLineAsync(logmessage);
+                logger.Close();
+            });
 
         }
 

@@ -85,7 +85,7 @@ namespace Binance_Example
 
         }
 
-        public MiniStopStrategy (MiniStopStrategy miniStopStrategy)
+        public MiniStopStrategy(MiniStopStrategy miniStopStrategy)
         {
             Instrument = miniStopStrategy.Instrument;
             SocketClient = miniStopStrategy.SocketClient;
@@ -95,6 +95,7 @@ namespace Binance_Example
             Direction = miniStopStrategy.Direction;
             Comission = miniStopStrategy.Comission;
             Id = miniStopStrategy.Id;
+            TextLog = miniStopStrategy.TextLog;
 
         }
 
@@ -136,6 +137,7 @@ namespace Binance_Example
             { // обычная мини стоп стратегия
                 childbot.WaitForEntryStop = false;
                 childbot.StopLevel = Direction == Direction.Sell ? StopLevel - PunktsForLevel2 : StopLevel + PunktsForLevel2;
+                childbot.LevelActivator = Direction == Direction.Buy ? childbot.StopLevel + PunktsForLevel2 : childbot.StopLevel - PunktsForLevel2;
             }
             if(special)
             {
@@ -187,7 +189,7 @@ namespace Binance_Example
                         if (!WaitForEntryStop)
                         {
                             
-                            MainWindow.LogMessage(string.Format("{0} Начинаем проверять условия", Id), TextLog);
+                            MainWindow.LogMessage(string.Format("{0} Начинаем проверять условия {1} цена стопа {2} цена условия {3}", Id, Direction, StopLevel, LevelActivator), TextLog);
                             CheckConditions();
                         }
                         else
@@ -218,7 +220,7 @@ namespace Binance_Example
                 {
                     stoporderid = result.Data.Id;
                     //Debug.WriteLine("Stop order placed!", "Sucess");
-                    MainWindow.LogMessage(string.Format("{0} Стоп ордеру успешно размещен {1} {2}", Id, result.Data.PositionSide, result.Data.Price), TextLog);
+                    MainWindow.LogMessage(string.Format("{0} Стоп ордер успешно размещен", Id), TextLog);
                 }
                 else
                 {
@@ -253,7 +255,7 @@ namespace Binance_Example
                 if (Direction == Direction.Buy && price > LevelActivator)
                 {
                     Debug.Print("Сработало условие. Цена выше уровня {0}", LevelActivator);
-                    MainWindow.LogMessage(string.Format("{0} Сработало условие. Цена выше уровня {0}", Id, LevelActivator), TextLog);
+                    MainWindow.LogMessage(string.Format("{0} Сработало условие! Остановка и запуск новой. Цена выше уровня {1}", Id, LevelActivator), TextLog);
 
                     Stop();
                     StartChild(true);
@@ -262,7 +264,7 @@ namespace Binance_Example
                 if (Direction == Direction.Sell && price < LevelActivator)
                 {
                     Debug.Print("Сработало условие. Цена ниже уровня {0}", LevelActivator);
-                    MainWindow.LogMessage(string.Format("{0} Сработало условие. Цена ниже уровня {0}", Id, LevelActivator), TextLog);
+                    MainWindow.LogMessage(string.Format("{0} Сработало условие! Остановка и запуск новой. Цена ниже уровня {1}", Id, LevelActivator), TextLog);
 
                     Stop();
                     StartChild(true);

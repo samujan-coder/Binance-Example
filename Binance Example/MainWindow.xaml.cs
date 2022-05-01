@@ -79,18 +79,26 @@ namespace Binance_Example
         /// сразу возвращает готовый подписанный инструмент 
         /// </summary>
         private Instrument SelectedInstrument 
-        {get
+        {
+            get
             {
-                var instrument = SpecialInstruments.FirstOrDefault(s => s.Code == Symbol);
-                if (instrument == null)
-                {
-                    instrument = new Instrument(Symbol, socketClient);
-                    instrument.SubscribeLastPriceAsync();
-                }
-                SpecialInstruments.Add(instrument);
-                return instrument;
+                return SubscribeInitialInstrument();
 
-            } }
+            } 
+        }
+
+        private Instrument SubscribeInitialInstrument()
+        {
+            var instrument = SpecialInstruments.FirstOrDefault(s => s.Code == Symbol);
+            if (instrument == null)
+            {
+                instrument = new Instrument(Symbol, socketClient);
+                instrument.SubscribeLastPriceAsync();
+            }
+            SpecialInstruments.Add(instrument);
+            return instrument;
+        }
+
         /// <summary
         /// Получение всего списка инструментов и подписка на изменение тикеров 
         /// </summary>
@@ -234,7 +242,7 @@ namespace Binance_Example
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
-        {
+        {/*
             try
             {
                 var stopbot = new MiniStopStrategy(BuyStop.IsChecked == true ? Direction.Buy : Direction.Sell,
@@ -256,20 +264,27 @@ namespace Binance_Example
             {
               MessageBox.Show(ex.ToString());
             }
-
+            */
         }
 
         private void Button_Click_2(object sender, RoutedEventArgs e)
         {
             try
             {
+
+                if (SelectedInstrument.LastPrice == 0) 
+                { MessageBox.Show("Нет последней цены инструмента"); return; }
+
                 string[] lines = File.ReadAllLines("stops.txt");
 
                 for (int i = 1; i < lines.Count(); i++)
                 {
                     string [] variables  = lines[i].Split(";");
                     Direction direction = variables[0] == "Buy" ? Direction.Buy : Direction.Sell;
-                    var stoplevel = decimal.Parse(variables[1]);
+
+                    var StopLevelPoints = decimal.Parse(variables[1]);
+                    var stoplevel = direction == Direction.Buy? SelectedInstrument.LastPrice + StopLevelPoints: SelectedInstrument.LastPrice - StopLevelPoints;
+                   // var stoplevel = decimal.Parse(variables[1]);
                     var algolevel = decimal.Parse(variables[2]);
                     var comission = decimal.Parse(variables[3]);
                     var level2 = decimal.Parse(variables[4]);
@@ -298,6 +313,11 @@ namespace Binance_Example
                MessageBox.Show(ex.ToString());
             }
 
+        }
+
+        private void Instruments_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            SubscribeInitialInstrument();
         }
     }
 }

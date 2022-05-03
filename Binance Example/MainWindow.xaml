@@ -16,7 +16,7 @@
             <RadioButton Content="BuyMarket" Name="BuyRadio" IsChecked="True" Margin="15,0,5,0" VerticalAlignment="Center"/>
             <RadioButton Content="SellMarket" Name="SellRadio" IsChecked="True" VerticalAlignment="Center" Margin="0,0,5,0" />
             <ComboBox Name="Instruments" SelectedValue="XRPUSDT" Margin="10,0,5,0" Width="100" SelectionChanged="Instruments_SelectionChanged"/>
-            <TextBox Text="10" Name="Volume" Margin="5,0,5,0" Width="61" Height="21"/>
+            <TextBox Text="0" Name="Volume" Margin="5,0,5,0" Width="61" Height="21"/>
             <Button Content="Start" Margin="10,0,0,0"  Height="33" Width="46" Click="Button_Click_1" ></Button>
         </StackPanel>
         <!--<StackPanel Orientation="Horizontal" VerticalAlignment="Top"  HorizontalAlignment="Left"  Margin="0,100,0,0">

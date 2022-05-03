@@ -279,33 +279,32 @@ namespace Binance_Example
 
                 for (int i = 1; i < lines.Count(); i++)
                 {
-                    string [] variables  = lines[i].Split(";");
+                    string[] variables = lines[i].Split(";");
                     Direction direction = variables[0] == "Buy" ? Direction.Buy : Direction.Sell;
 
                     var StopLevelPoints = decimal.Parse(variables[1]);
-                    var stoplevel = direction == Direction.Buy? SelectedInstrument.LastPrice + StopLevelPoints: SelectedInstrument.LastPrice - StopLevelPoints;
-                   // var stoplevel = decimal.Parse(variables[1]);
-                    var algolevel = decimal.Parse(variables[2]);
+                    //первый расчет идет из последней цены, поэтому насильно передаем
+                    var stoplevel = direction == Direction.Buy ? SelectedInstrument.LastPrice + StopLevelPoints : SelectedInstrument.LastPrice - StopLevelPoints;
+                    var algopunkts = decimal.Parse(variables[2]);
                     var comission = decimal.Parse(variables[3]);
-                    var level2 = decimal.Parse(variables[4]);
-                    var volume = decimal.Parse(variables[5]);
+                    var volume = decimal.Parse(variables[4]);
 
 
                     var stopbot = new MiniStopStrategy(direction,
-                        SelectedInstrument, stoplevel, comission, algolevel)
+                        SelectedInstrument, stoplevel, comission, algopunkts)
                     {
                         SocketClient = socketClient,
                         startOkay = startOkay,
                         Volume = volume,
                         WaitForEntryStop = false,
-                        PunktsForLevel2 = level2,
-                        TextLog =LogTextBox,
-                        Id=i,
+                        TextLog = LogTextBox,
+                        Id = i,
+                        StopPunkts = StopLevelPoints,
                     };
 
+                    stopbot.LogInitialSettings();
                     stopStrategies.Add(stopbot);
-                    var textstop = string.Format("Добавлен стоп {0} цена стопа {1} цена условия {2} второй стоп {3}", stopbot.Direction, stopbot.StopLevel, stopbot.LevelActivator, stopbot.NewStopLevel);
-                    LogMessage(textstop,LogTextBox);
+                   
                 }
             }
             catch (Exception ex)

@@ -1,16 +1,11 @@
 ﻿using Binance.Net.Clients;
 using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures.Socket;
-using CryptoExchange.Net.CommonObjects;
 using CryptoExchange.Net.Sockets;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
 
 namespace Binance_Example
@@ -41,7 +36,7 @@ namespace Binance_Example
         /// <summary>
         /// Специальный уровень для нового уже стопа...
         /// </summary>
-        public decimal NewStopLevel { get => Direction == Direction.Sell ? StopLevel - Comission : StopLevel + Comission; }
+        public decimal StopLevelComission { get => Direction == Direction.Sell ? StopLevel - Comission : StopLevel + Comission; }
         //public BinanceClient BinanceClient { get; set; }
         public BinanceSocketClient SocketClient { get; set; }
 
@@ -60,11 +55,19 @@ namespace Binance_Example
 
         public bool Opposite { get; set; }
 
-        public decimal PunktsForLevel2 { get; set; }
+       //public decimal PunktsForLevel2 { get; set; }
 
         public TextBox TextLog { get; set; }
 
         public int Id { get; set; }
+
+        /// <summary>
+        /// алгопункты
+        /// </summary>
+        public decimal AlgoPunkts { get; set; }
+
+        
+        public decimal StopPunkts { get; set; }
        
 
         /// <summary>
@@ -81,7 +84,15 @@ namespace Binance_Example
             Instrument = instrument;
             StopLevel = _stoplevel;
             Comission = _punktsForActivatorPrice;
-            LevelActivator = Direction == Direction.Buy ? StopLevel + algopunkts : StopLevel - algopunkts;
+            AlgoPunkts = algopunkts;
+            LevelActivator = Direction == Direction.Buy ? StopLevel + AlgoPunkts : StopLevel - AlgoPunkts;
+
+        }
+
+        public void LogInitialSettings ()
+        {
+            var textstop = string.Format("{0} Создан стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, LevelActivator, StopLevelComission);
+            MainWindow.LogMessage(textstop, TextLog);
 
         }
 
@@ -91,11 +102,12 @@ namespace Binance_Example
             SocketClient = miniStopStrategy.SocketClient;
             startOkay = miniStopStrategy.startOkay;
             Volume = miniStopStrategy.Volume;
-            PunktsForLevel2 = miniStopStrategy.PunktsForLevel2;
             Direction = miniStopStrategy.Direction;
             Comission = miniStopStrategy.Comission;
             Id = miniStopStrategy.Id;
             TextLog = miniStopStrategy.TextLog;
+            AlgoPunkts = miniStopStrategy.AlgoPunkts;
+            StopPunkts = miniStopStrategy.StopPunkts;
 
         }
 
@@ -124,25 +136,25 @@ namespace Binance_Example
             
         }
 
-        public void StartChild(bool special = false)
+        public void StartChild(bool waitForEntry = false)
         {
             // дописать уровни и объемы 
             //дописать комиссию, которая должна быть учтена при выставлении стопа 
 
-            //special - выставляет ордер в оппозитную сторону и ждет его исполнения
-            //!special - сразу выставляет "рабочий стоп"
+            //waitForEntry - выставляет ордер в оппозитную сторону и ждет его исполнения
+            //!waitForEntry - сразу выставляет "рабочий стоп"
 
             var childbot = new MiniStopStrategy(this);
-            if (!special)
+            childbot.WaitForEntryStop = waitForEntry;
+
+            if (!waitForEntry)
             { // обычная мини стоп стратегия
-                childbot.WaitForEntryStop = false;
-                childbot.StopLevel = Direction == Direction.Sell ? StopLevel - PunktsForLevel2 : StopLevel + PunktsForLevel2;
-                childbot.LevelActivator = Direction == Direction.Buy ? childbot.StopLevel + PunktsForLevel2 : childbot.StopLevel - PunktsForLevel2;
+                childbot.StopLevel = Direction == Direction.Buy ? StopLevel + StopPunkts : StopLevel - StopPunkts;
+                childbot.LevelActivator = Direction == Direction.Buy ? childbot.StopLevel + AlgoPunkts : childbot.StopLevel - AlgoPunkts;
             }
-            if(special)
+            else
             {
                 childbot.StopLevel = StopLevel;
-                childbot.WaitForEntryStop = true;
             }
 
             childbot.Start();
@@ -152,8 +164,8 @@ namespace Binance_Example
         public async void Start()
         {
 
-            var startText = string.Format("{0} Добавлен стоп {1} цена стопа {2} цена условия {3} второй стоп {4}", Id,Direction, StopLevel, LevelActivator, NewStopLevel);
-            MainWindow.LogMessage(startText, TextLog);
+            
+            
 
             using (var client = new BinanceClient())
             {
@@ -163,15 +175,20 @@ namespace Binance_Example
             
             }
 
+            var startText = "";
+            
             if (!WaitForEntryStop) // классический старт
-            { 
-                PlaceStopOrderAsync(Direction, Instrument.Code, StopLevel, Volume); 
+            {
+                startText = string.Format("{0} Размещаем стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, LevelActivator, StopLevelComission);
+                PlaceStopOrderAsync(Direction, Instrument.Code, StopLevelComission, Volume); 
             }
             else
             {
                 var oppositedirection = Direction == Direction.Buy ? Direction.Sell : Direction.Buy;
-                PlaceStopOrderAsync(oppositedirection, Instrument.Code, NewStopLevel, Volume);
+                startText = string.Format("{0} Размещаем стоп {1} цена стопа {2}", Id, oppositedirection, StopLevel);
+                PlaceStopOrderAsync(oppositedirection, Instrument.Code, StopLevelComission, Volume);
             }
+            MainWindow.LogMessage(startText, TextLog);
         }
 
         private void OnOrderUpdate (DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate)
@@ -189,12 +206,12 @@ namespace Binance_Example
                         if (!WaitForEntryStop)
                         {
                             
-                            MainWindow.LogMessage(string.Format("{0} Начинаем проверять условия {1} цена стопа {2} цена условия {3}", Id, Direction, StopLevel, LevelActivator), TextLog);
+                            MainWindow.LogMessage(string.Format("{0} Обычный стоп исполнен!Проверяем условия {1} цена стопа {2} цена условия {3}", Id, Direction, StopLevel, LevelActivator), TextLog);
                             CheckConditions();
                         }
                         else
                         {
-                            MainWindow.LogMessage(string.Format("{0} Останавливаем и запускаем новую", Id), TextLog);
+                            MainWindow.LogMessage(string.Format("{0} Исполнился оппозитный стоп! Останавливаем и запускаем новую", Id), TextLog);
                             Stop();
                             //создаем новую мини стоп бот стратегию, но уже с классическим 
                             StartChild();

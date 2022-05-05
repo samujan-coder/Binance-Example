@@ -287,7 +287,8 @@ namespace Binance_Example
                     var stoplevel = direction == Direction.Buy ? SelectedInstrument.LastPrice + StopLevelPoints : SelectedInstrument.LastPrice - StopLevelPoints;
                     var algopunkts = decimal.Parse(variables[2]);
                     var comission = decimal.Parse(variables[3]);
-                    var volume = decimal.Parse(variables[4]);
+                    var stoppunkts2 = decimal.Parse(variables[4]);
+                    var volume = decimal.Parse(variables[5]);
 
 
                     var stopbot = new MiniStopStrategy(direction,
@@ -300,6 +301,7 @@ namespace Binance_Example
                         TextLog = LogTextBox,
                         Id = i,
                         StopPunkts = StopLevelPoints,
+                        StopPunkts2 = stoppunkts2,
                     };
 
                     stopbot.LogInitialSettings();

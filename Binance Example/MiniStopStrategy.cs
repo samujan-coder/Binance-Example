@@ -68,6 +68,8 @@ namespace Binance_Example
 
         
         public decimal StopPunkts { get; set; }
+
+        public decimal StopPunkts2 { get; set; }
        
 
         /// <summary>
@@ -108,6 +110,7 @@ namespace Binance_Example
             TextLog = miniStopStrategy.TextLog;
             AlgoPunkts = miniStopStrategy.AlgoPunkts;
             StopPunkts = miniStopStrategy.StopPunkts;
+            StopPunkts2 = miniStopStrategy.StopPunkts2;
 
         }
 
@@ -149,7 +152,7 @@ namespace Binance_Example
 
             if (!waitForEntry)
             { // обычная мини стоп стратегия
-                childbot.StopLevel = Direction == Direction.Buy ? StopLevel + StopPunkts : StopLevel - StopPunkts;
+                childbot.StopLevel = Direction == Direction.Buy ? StopLevel + StopPunkts2 : StopLevel - StopPunkts2;
                 childbot.LevelActivator = Direction == Direction.Buy ? childbot.StopLevel + AlgoPunkts : childbot.StopLevel - AlgoPunkts;
             }
             else

@@ -244,7 +244,7 @@ namespace Binance_Example
                 }
                 else
                 {
-                    MainWindow.LogMessage(string.Format("{0} !Ордер не выставлен! {1} {2} opposite:{3} {4}", Id, Direction,StopLevel, WaitForEntryStop,result.Error.Message), TextLog);
+                    MainWindow.LogMessage(string.Format("{0} !Ордер не выставлен! {1} {2} opposite:{3} {4}", Id, Direction,StopLevel, WaitForEntryStop,result.Error.Message), TextLog,true);
                     //Debug.WriteLine($"Order placing failed: {result.Error.Message}", "Failed", MessageBoxButton.OK, MessageBoxImage.Error); 
                 }
 

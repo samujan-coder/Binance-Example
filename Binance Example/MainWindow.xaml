@@ -35,7 +35,7 @@
             <Button Content="Add" Name="AddButton" Margin="10,0,0,0"  Height="33" Width="46" Click="AddButton_Click" ></Button>
 
         </StackPanel>-->
-        <TextBox  HorizontalAlignment="Left" Name="LogTextBox"  Margin="10,146,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="1035" Height="362"/>
+        <TextBox HorizontalAlignment="Left" Name="LogTextBox"  Margin="10,146,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="1035" Height="362"/>
 
         <!--<ListBox  x:Name="ItemsControl" Height="38" Margin="0,91,0,52" BorderBrush="#FF28292B" >
             <ListBox.ItemTemplate >

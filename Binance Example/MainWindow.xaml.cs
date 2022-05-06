@@ -23,7 +23,6 @@ namespace Binance_Example
         {
             InitializeComponent();
             ReadKeys();
-            LogTextBox.ScrollToEnd();
            
         }
         private string apiKey;//= /*"rH7bAyC2deozqWXYFrSCikoCfkxVjkeyvthppiUTnvSZyiFbcHdnXIyTgiauWFSk";*/"8EW31T8PJKG14M1U5WLPVz7PTpy6OdQplbHEh1n9sMqPZfTY2O3t6CpAG5x49LRP";
@@ -62,16 +61,21 @@ namespace Binance_Example
 
 
 
-        public async static void LogMessage(string message, TextBox LogTextBox)
+        public async static void LogMessage(string message, TextBox LogTextBox, bool error = false)
         {
+         
             LogTextBox.Dispatcher.Invoke(() =>
             {
                 var logmessage = DateTime.Now + " | " + message;
                 LogTextBox.AppendText(logmessage + Environment.NewLine);
+                LogTextBox.ScrollToEnd();
                 var logger = new StreamWriter(DateTime.Now.ToString("dd_MM_yyyy") + ".txt", true);
                 logger.WriteLineAsync(logmessage);
                 logger.Close();
             });
+
+            if(error)
+            MessageBox.Show(message,"Ошибка");
 
         }
 

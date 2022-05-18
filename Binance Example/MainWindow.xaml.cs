@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows.Controls;
+using Telegram.Bot;
 
 namespace Binance_Example
 {
@@ -19,14 +20,19 @@ namespace Binance_Example
     /// </summary>
     public partial class MainWindow : Window
     {
+
+        private TelegramBotClient bot { get; set; }
         public MainWindow()
         {
             InitializeComponent();
-            ReadKeys();
-           
+            RealAllSettings();
+
+            bot = new TelegramBotClient("5176340248:AAEIkNFIRQyuJg-dcF0cVP81V8YqzSodwAc");
+
         }
-        private string apiKey;//= /*"rH7bAyC2deozqWXYFrSCikoCfkxVjkeyvthppiUTnvSZyiFbcHdnXIyTgiauWFSk";*/"8EW31T8PJKG14M1U5WLPVz7PTpy6OdQplbHEh1n9sMqPZfTY2O3t6CpAG5x49LRP";
-        private string apiSecret;//=/* "AnyqX8c9NqPu0YhQOuzzQPpsH52fRdZ7zTvFg6wfCxQdCnlsW8J3aq87hqfi8qsl";*/"XSE4AXN198B2przYws4JuDyWvAdoIbxrluA0IGsHAk47T2yqzlcLvRYJkWRapnuM";
+        private string apiKey;
+        private string apiSecret;
+        private string TelegramUserKey;
         private BinanceSocketClient socketClient = new BinanceSocketClient() { };
 
 
@@ -41,17 +47,18 @@ namespace Binance_Example
 
         public ObservableCollection<Instrument> SpecialInstruments { get; set; } = new ObservableCollection<Instrument>() { };
 
-        private string directory =/* @"C:\log\" +*/ DateTime.Now.ToString("HH_mm_dd_MM_yyyy") + ".txt";
 
 
-        private void ReadKeys()
+        private void RealAllSettings()
         {
             try
             {
                 string[] lines = File.ReadAllLines("api.txt");
 
-                apiKey = lines[0];
-                apiSecret = lines[1];
+                apiKey = lines[1];
+                apiSecret = lines[2];
+                TelegramUserKey = lines[3];
+
             }
             catch (Exception ex)
             {
@@ -61,12 +68,12 @@ namespace Binance_Example
 
 
 
-        public async static void LogMessage(string message, TextBox LogTextBox, bool error = false)
+        public async static void LogMessage(string message, TextBox LogTextBox,TelegramBotClient bot, bool error = false)
         {
-         
+            var logmessage = DateTime.Now + " | " + message;
             LogTextBox.Dispatcher.Invoke(() =>
             {
-                var logmessage = DateTime.Now + " | " + message;
+                
                 LogTextBox.AppendText(logmessage + Environment.NewLine);
                 LogTextBox.ScrollToEnd();
                 var logger = new StreamWriter(DateTime.Now.ToString("dd_MM_yyyy") + ".txt", true);
@@ -74,7 +81,9 @@ namespace Binance_Example
                 logger.Close();
             });
 
-            if(error)
+            bot.SendTextMessageAsync("1019426280", logmessage);
+
+            if (error)
             MessageBox.Show(message,"Ошибка");
 
         }
@@ -90,6 +99,8 @@ namespace Binance_Example
 
             } 
         }
+
+ 
 
         private Instrument SubscribeInitialInstrument()
         {
@@ -124,7 +135,7 @@ namespace Binance_Example
                     result.Data.ToList().ForEach(item => listinstruments.Add(item.Symbol));
                     Instruments.ItemsSource = listinstruments;
 
-                    LogMessage("Подписка на инструменты успешно",LogTextBox);
+                    LogMessage("Подписка на инструменты успешно",LogTextBox,bot);
                 }
                 else
                     MessageBox.Show($"Error requesting data: {result.Error.Message}", "error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -169,7 +180,7 @@ namespace Binance_Example
                     //Assets = new ObservableCollection<AssetViewModel>(accountResult.Data.Balances.Where(b => b.Available != 0 || b.Locked != 0).Select(b => new AssetViewModel() { Asset = b.Asset, Free = b.Available, Locked = b.Locked }).ToList());
                     //фьючерсный 
                     Assets = new ObservableCollection<AssetViewModel>(accountResult.Data.Assets.Where(b => b.AvailableBalance != 0).Select(b => new AssetViewModel() { Asset = b.Asset, Free = b.AvailableBalance }).ToList());
-                    foreach (var asset in Assets) LogMessage( string.Format("{0} {1} {2}", asset.Asset, asset.Free, asset.Locked),LogTextBox);
+                    foreach (var asset in Assets) LogMessage( string.Format("{0} {1} {2}", asset.Asset, asset.Free, asset.Locked),LogTextBox,bot);
                 }
                 else
                     MessageBox.Show($"Error requesting account info: {accountResult.Error.Message}", "error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -306,6 +317,7 @@ namespace Binance_Example
                         Id = i,
                         StopPunkts = StopLevelPoints,
                         StopPunkts2 = stoppunkts2,
+                        TelegramBot = bot,
                     };
 
                     stopbot.LogInitialSettings();

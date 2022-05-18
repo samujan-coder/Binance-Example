@@ -72,7 +72,7 @@ namespace Binance_Example
 
         public decimal StopPunkts2 { get; set; }
 
-        public TelegramBotClient TelegramBot { get; set; }
+        public ExtendedTelegram TelegramBot { get; set; }
        
 
         /// <summary>

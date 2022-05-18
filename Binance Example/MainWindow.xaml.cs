@@ -15,24 +15,32 @@ using Telegram.Bot;
 
 namespace Binance_Example
 {
+
+    /// <summary>
+    /// Производный класс
+    /// </summary>
+    public partial class ExtendedTelegram
+    {
+        public TelegramBotClient telegramBotClient { get; set; } =  new TelegramBotClient("5176340248:AAEIkNFIRQyuJg-dcF0cVP81V8YqzSodwAc");
+        public string TelegramUserKey { get; set; }
+    }
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
 
-        private TelegramBotClient bot { get; set; }
+        private ExtendedTelegram bot { get; set; }
         public MainWindow()
         {
             InitializeComponent();
             RealAllSettings();
-
-            bot = new TelegramBotClient("5176340248:AAEIkNFIRQyuJg-dcF0cVP81V8YqzSodwAc");
+            
+          
 
         }
         private string apiKey;
         private string apiSecret;
-        private string TelegramUserKey;
         private BinanceSocketClient socketClient = new BinanceSocketClient() { };
 
 
@@ -57,7 +65,8 @@ namespace Binance_Example
 
                 apiKey = lines[1];
                 apiSecret = lines[2];
-                TelegramUserKey = lines[3];
+                if(bot == null) bot = new ExtendedTelegram();
+                bot.TelegramUserKey = lines[3];
 
             }
             catch (Exception ex)
@@ -68,7 +77,7 @@ namespace Binance_Example
 
 
 
-        public async static void LogMessage(string message, TextBox LogTextBox,TelegramBotClient bot, bool error = false)
+        public async static void LogMessage(string message, TextBox LogTextBox,ExtendedTelegram extendedTelegram, bool error = false)
         {
             var logmessage = DateTime.Now + " | " + message;
             LogTextBox.Dispatcher.Invoke(() =>
@@ -81,7 +90,7 @@ namespace Binance_Example
                 logger.Close();
             });
 
-            bot.SendTextMessageAsync("1019426280", logmessage);
+            extendedTelegram.telegramBotClient.SendTextMessageAsync(extendedTelegram.TelegramUserKey, logmessage);
 
             if (error)
             MessageBox.Show(message,"Ошибка");

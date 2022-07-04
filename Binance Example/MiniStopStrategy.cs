@@ -1,6 +1,7 @@
 ﻿using Binance.Net.Clients;
 using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures.Socket;
+using CryptoExchange.Net.CommonObjects;
 using CryptoExchange.Net.Sockets;
 using System;
 using System.Collections.ObjectModel;
@@ -40,6 +41,7 @@ namespace Binance_Example
         public decimal StopLevelComission { get => Direction == Direction.Sell ? StopLevel - Comission : StopLevel + Comission; }
         //public BinanceClient BinanceClient { get; set; }
         public BinanceSocketClient SocketClient { get; set; }
+        public BinanceClient Client { get; set; }
 
         private decimal punktsForActivatorPrice;
         private ObservableCollection<MiniStopStrategy> AllStopStrategies;
@@ -73,12 +75,19 @@ namespace Binance_Example
         public decimal StopPunkts2 { get; set; }
 
         public ExtendedTelegram TelegramBot { get; set; }
-       
+
+        private ObservableCollection<MiniStopStrategy> childStopStrategies { get; set; } = new ObservableCollection<MiniStopStrategy>() { };
+
 
         /// <summary>
         /// Ожидать стопа, который сработает в другую сторону 
         /// </summary>
         public bool WaitForEntryStop { get; set; }
+
+        /// <summary>
+        /// специальный отступ
+        /// </summary>
+        public decimal N { get; set; }
 
         //дописать. Тут надо много всего указать
         public MiniStopStrategy (Direction direction, Instrument instrument, decimal _stoplevel, decimal _punktsForActivatorPrice, decimal algopunkts)
@@ -94,9 +103,11 @@ namespace Binance_Example
 
         }
 
+        public decimal GetLevelActivatorWithOffset() => Direction == Direction.Buy ? LevelActivator - N : LevelActivator +  N; 
+
         public void LogInitialSettings ()
         {
-            var textstop = string.Format("{0} Создан стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, LevelActivator, StopLevelComission);
+            var textstop = string.Format("{0} Создан стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, GetLevelActivatorWithOffset(), StopLevelComission);
             MainWindow.LogMessage(textstop, TextLog, TelegramBot);
 
         }
@@ -105,6 +116,7 @@ namespace Binance_Example
         {
             Instrument = miniStopStrategy.Instrument;
             SocketClient = miniStopStrategy.SocketClient;
+            Client = miniStopStrategy.Client;
             startOkay = miniStopStrategy.startOkay;
             Volume = miniStopStrategy.Volume;
             Direction = miniStopStrategy.Direction;
@@ -120,27 +132,30 @@ namespace Binance_Example
 
         public async void Stop()
         {
-           
-                StrategyOn = false;
 
-                try
-                {
-                    if (stoporderid != 0)
-                        using (var client = new BinanceClient())
-                        {
-                            var subOkay = await client.UsdFuturesApi.Trading.CancelOrderAsync(Instrument.Code, orderId: stoporderid);
+            StrategyOn = false;
 
-                            if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ордер не получилось отменить", Id), TextLog, TelegramBot);
+            try
+            {
+                MainWindow.LogMessage(String.Format("{0} Остановка бота, удаление ордеров", Id), TextLog, TelegramBot);
 
-                        }
-                }
-                catch (Exception ex)
-                {
-                    MainWindow.LogMessage(String.Format("{0} Ошибка отмены ордера {1}", Id, ex.ToString), TextLog, TelegramBot);
-                }
+                if (stoporderid == 0) return;
 
-                Instrument.PropertyChanged -= CheckConditions;
-            
+                var subOkay = await Client.UsdFuturesApi.Trading.CancelOrderAsync(Instrument.Code, orderId: stoporderid);
+
+                if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ордер не получилось отменить", Id), TextLog, TelegramBot);
+
+                foreach (var stopStrategy in childStopStrategies) stopStrategy.Stop();
+
+
+            }
+            catch (Exception ex)
+            {
+                MainWindow.LogMessage(String.Format("{0} Ошибка отмены ордера {1}", Id, ex.ToString), TextLog, TelegramBot);
+            }
+
+            Instrument.PropertyChanged -= CheckConditions;
+
         }
 
         public void StartChild(bool waitForEntry = false)
@@ -152,6 +167,7 @@ namespace Binance_Example
             //!waitForEntry - сразу выставляет "рабочий стоп"
 
             var childbot = new MiniStopStrategy(this);
+            childStopStrategies.Add(childbot);
             childbot.WaitForEntryStop = waitForEntry;
 
             if (!waitForEntry)
@@ -168,26 +184,55 @@ namespace Binance_Example
 
         }
 
+        public async void RestoreOrders()
+        {
+            if (stoporderid != 0)
+            {
+                restoredOrder = Client.UsdFuturesApi.CommonFuturesClient.GetOrderAsync(stoporderid.ToString(), Instrument.Code, new System.Threading.CancellationToken()).Result;
+                CheckOrderCondition(decimal.Parse(restoredOrder.Data.Id), restoredOrder.Data.Status ==CommonOrderStatus.Filled);
+            }
+       
+        
+        }
+
         public async void Start()
         {
 
-            
-            
+            var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
+            if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ошибка подписки на обновление ордеров", Id), TextLog, TelegramBot);
 
-            using (var client = new BinanceClient())
+            subOkay.Data.ActivityUnpaused += () =>
             {
-                var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
+                MainWindow.LogMessage("Активность возвращена [стратегия] *" + Id, TextLog, TelegramBot);
+                RestoreOrders();
+            };
 
-                if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ошибка подписки на обновление ордеров", Id), TextLog, TelegramBot);
-            
-            }
+            subOkay.Data.ActivityPaused += () =>
+            {
+                MainWindow.LogMessage("Активность на паузе [стратегия] *" + Id, TextLog, TelegramBot);
+            };
+
+            subOkay.Data.ConnectionRestored += (ex) =>
+            {
+                MainWindow.LogMessage("Соединение восстановлено [стратегия] *" + Id, TextLog, TelegramBot);
+                RestoreOrders();
+            };
+            subOkay.Data.ConnectionLost += () =>
+            {
+                MainWindow.LogMessage("Потеря соединения [стратегия] *" + Id, TextLog, TelegramBot);
+            };
+
+            subOkay.Data.Exception += ex =>
+            { 
+                MainWindow.LogMessage("ОШИБКА ордеров СТРАТЕГИЯ *" + Id + "* " + ex.Message, TextLog, TelegramBot);
+            };
 
             var startText = "";
-            
+
             if (!WaitForEntryStop) // классический старт
             {
-                startText = string.Format("{0} Размещаем стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, LevelActivator, StopLevelComission);
-                PlaceStopOrderAsync(Direction, Instrument.Code, StopLevelComission, Volume); 
+                startText = string.Format("{0} Размещаем стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, GetLevelActivatorWithOffset(), StopLevelComission);
+                PlaceStopOrderAsync(Direction, Instrument.Code, StopLevelComission, Volume);
             }
             else
             {
@@ -202,57 +247,62 @@ namespace Binance_Example
         {
             lock (locker)
             {
-                if (stoporderid != 0)
-                {
-                    if (orderupdate.Data.UpdateData.OrderId == stoporderid && orderupdate.Data.UpdateData.Status == OrderStatus.Filled)
-                    {
-                        stoporderid = 0;
-
-                        Debug.WriteLine("Стоп исполнился!");
-
-                        if (!WaitForEntryStop)
-                        {
-                            
-                            MainWindow.LogMessage(string.Format("{0} Обычный стоп исполнен!Проверяем условия {1} цена стопа {2} цена условия {3}", Id, Direction, StopLevel, LevelActivator), TextLog, TelegramBot);
-                            CheckConditions();
-                        }
-                        else
-                        {
-                            MainWindow.LogMessage(string.Format("{0} Исполнился оппозитный стоп! Останавливаем и запускаем новую", Id), TextLog, TelegramBot);
-                            Stop();
-                            //создаем новую мини стоп бот стратегию, но уже с классическим 
-                            StartChild();
-
-                        }
-                    }
-                }
-                Debug.WriteLine("New info about orders {0}", orderupdate.Data.UpdateData.TradeId);
-                Debug.Print("order update {0} {1}", orderupdate.Data.UpdateData.Price, orderupdate.Data.UpdateData.Quantity);
+                //  if (orderupdate.Data.UpdateData.OrderId == stoporderid && orderupdate.Data.UpdateData.Status == OrderStatus.Filled)
+                CheckOrderCondition(orderupdate.Data.UpdateData.OrderId, orderupdate.Data.UpdateData.Status==OrderStatus.Filled);
             }
             
+        }
+
+        public void CheckOrderCondition(decimal OrderId, bool IsFilled )
+        {
+            if (stoporderid != 0)
+            {
+                if (OrderId == stoporderid && IsFilled)
+                {
+                    stoporderid = 0;
+
+                    Debug.WriteLine("Стоп исполнился!");
+
+                    if (!WaitForEntryStop)
+                    {
+
+                        MainWindow.LogMessage(string.Format("{0} Обычный стоп исполнен!Проверяем условия {1} цена стопа {2} цена условия {3}", Id, Direction, StopLevel, GetLevelActivatorWithOffset()), TextLog, TelegramBot);
+                        CheckConditions();
+                    }
+                    else
+                    {
+                        MainWindow.LogMessage(string.Format("{0} Исполнился оппозитный стоп! Останавливаем и запускаем новую", Id), TextLog, TelegramBot);
+                        Stop();
+                        //создаем новую мини стоп бот стратегию, но уже с классическим 
+                        StartChild();
+
+                    }
+                }
+            }
+           // Debug.WriteLine("New info about orders {0}", orderupdate.Data.UpdateData.TradeId);
+            //Debug.Print("order update {0} {1}", orderupdate.Data.UpdateData.Price, orderupdate.Data.UpdateData.Quantity);
         }
 
         public async Task PlaceStopOrderAsync(Direction direction, string code, decimal stopprice, decimal volume)
         {
             StopLevel = stopprice;
-            using (var client = new BinanceClient())
+
+
+            var result = await Client.UsdFuturesApi.Trading.PlaceOrderAsync(code, direction == Direction.Buy ? OrderSide.Buy : OrderSide.Sell, FuturesOrderType.StopMarket, volume, stopPrice: stopprice, timeInForce: TimeInForce.GoodTillCanceled);
+
+            if (result.Success)
             {
-               
-                var result = await client.UsdFuturesApi.Trading.PlaceOrderAsync(code, direction==Direction.Buy? OrderSide.Buy: OrderSide.Sell, FuturesOrderType.StopMarket, volume, stopPrice: stopprice, timeInForce: TimeInForce.GoodTillCanceled);
-
-                if (result.Success)
-                {
-                    stoporderid = result.Data.Id;
-                    //Debug.WriteLine("Stop order placed!", "Sucess");
-                    MainWindow.LogMessage(string.Format("{0} Стоп ордер успешно размещен", Id), TextLog, TelegramBot);
-                }
-                else
-                {
-                    MainWindow.LogMessage(string.Format("{0} !Ордер не выставлен! {1} {2} opposite:{3} {4}", Id, Direction,StopLevel, WaitForEntryStop,result.Error.Message), TextLog, TelegramBot,true);
-                    //Debug.WriteLine($"Order placing failed: {result.Error.Message}", "Failed", MessageBoxButton.OK, MessageBoxImage.Error); 
-                }
-
+                stoporderid = result.Data.Id;
+                //Debug.WriteLine("Stop order placed!", "Sucess");
+                MainWindow.LogMessage(string.Format("{0} Стоп ордер успешно размещен", Id), TextLog, TelegramBot);
             }
+            else
+            {
+                MainWindow.LogMessage(string.Format("{0} !Ордер не выставлен! {1} {2} opposite:{3} {4}", Id, Direction, StopLevel, WaitForEntryStop, result.Error.Message), TextLog, TelegramBot, true);
+                //Debug.WriteLine($"Order placing failed: {result.Error.Message}", "Failed", MessageBoxButton.OK, MessageBoxImage.Error); 
+            }
+
+
         }
 
         private void CheckConditions()
@@ -262,6 +312,8 @@ namespace Binance_Example
         }
 
         decimal lastprice = 0;
+        private CryptoExchange.Net.Objects.WebCallResult<Order> restoredOrder;
+
         ///проверка основных условий 
         private void CheckConditions(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -276,19 +328,19 @@ namespace Binance_Example
 
                 Debug.Print("Отслеживаем условия {0}", price);
 
-                if (Direction == Direction.Buy && price > LevelActivator)
+                if (Direction == Direction.Buy && price > GetLevelActivatorWithOffset())
                 {
-                    Debug.Print("Сработало условие. Цена выше уровня {0}", LevelActivator);
-                    MainWindow.LogMessage(string.Format("{0} Сработало условие! Остановка и запуск новой. Цена выше уровня {1}", Id, LevelActivator), TextLog, TelegramBot);
+                    Debug.Print("Сработало условие. Цена выше уровня {0}", GetLevelActivatorWithOffset());
+                    MainWindow.LogMessage(string.Format("{0} Сработало условие! Остановка и запуск новой. Цена выше уровня {1}", Id, GetLevelActivatorWithOffset()), TextLog, TelegramBot);
 
                     Stop();
                     StartChild(true);
                 }
 
-                if (Direction == Direction.Sell && price < LevelActivator)
+                if (Direction == Direction.Sell && price < GetLevelActivatorWithOffset())
                 {
-                    Debug.Print("Сработало условие. Цена ниже уровня {0}", LevelActivator);
-                    MainWindow.LogMessage(string.Format("{0} Сработало условие! Остановка и запуск новой. Цена ниже уровня {1}", Id, LevelActivator), TextLog, TelegramBot);
+                    Debug.Print("Сработало условие. Цена ниже уровня {0}", GetLevelActivatorWithOffset());
+                    MainWindow.LogMessage(string.Format("{0} Сработало условие! Остановка и запуск новой. Цена ниже уровня {1}", Id, GetLevelActivatorWithOffset()), TextLog, TelegramBot);
 
                     Stop();
                     StartChild(true);

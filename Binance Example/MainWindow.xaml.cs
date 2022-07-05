@@ -232,7 +232,7 @@ namespace Binance_Example
         private async void Cancel_Click(object sender, RoutedEventArgs e)
         {
 
-            stopStrategies.ToList().ForEach(s => s.Stop());
+            stopStrategies.ToList().ForEach(s => { s.Stop(); s.StopChild(); });
             stopStrategies.Clear();
         }
 

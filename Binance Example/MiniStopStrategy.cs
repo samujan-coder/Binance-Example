@@ -145,9 +145,6 @@ namespace Binance_Example
 
                 if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ордер не получилось отменить", Id), TextLog, TelegramBot);
 
-                foreach (var stopStrategy in childStopStrategies) stopStrategy.Stop();
-
-
             }
             catch (Exception ex)
             {
@@ -156,6 +153,12 @@ namespace Binance_Example
 
             Instrument.PropertyChanged -= CheckConditions;
 
+        }
+
+        public async void StopChild()
+        {
+
+            foreach (var stopStrategy in childStopStrategies) stopStrategy.Stop();
         }
 
         public void StartChild(bool waitForEntry = false)

@@ -8,13 +8,14 @@
         Title="Binance Example" Height="554" Width="1102">
     <Grid HorizontalAlignment="Center" Width="1051">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,10,0,0">
+            <TextBox Text="0,001" Name="Offset" Margin="5,0,5,0" Width="61" Height="21"/>
             <Button Content="ReadStops" Margin="10,0,0,0" Height="33" Width="80" Click="Button_Click_2" />
             <Button Content="CancelAllorders" Margin="10,0,0,0" x:Name="Cancel"  Height="33" Width="103" Click="Cancel_Click" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Top"  HorizontalAlignment="Left"  Margin="0,50,0,0">
           
             <ComboBox Name="Instruments" SelectedValue="XRPUSDT" Margin="10,0,5,0" Width="100" SelectionChanged="Instruments_SelectionChanged"/>
-            <TextBox Text="0,001" Name="Offset" Margin="5,0,5,0" Width="61" Height="21"/>
+            
             <Button Content="Start" Margin="10,0,0,0"  Height="33" Width="46" Click="Button_Click_1" ></Button>
         </StackPanel>
         <!--<StackPanel Orientation="Horizontal" VerticalAlignment="Top"  HorizontalAlignment="Left"  Margin="0,100,0,0">

@@ -279,9 +279,7 @@ namespace Binance_Example
             */
             #endregion
 
-            stopStrategies.ToList().ForEach(s => {
-                s.N = decimal.Parse(Offset.Text);
-                s.Start(); });
+            stopStrategies.ToList().ForEach(s => { s.Start(); });
 
         }
 
@@ -348,9 +346,9 @@ namespace Binance_Example
                         StopPunkts2 = stoppunkts2,
                         TelegramBot = bot,
                         Client = BinanceUsualClient,
+                        N = decimal.Parse(Offset.Text)
 
-                    };
-
+                };
                     stopbot.LogInitialSettings();
                     stopStrategies.Add(stopbot);
 

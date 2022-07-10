@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Binance_Example"
         mc:Ignorable="d"
-        Title="Binance Example" Height="554" Width="1102">
+        Title="Binance Example" Height="554" Width="1102" Icon="/robot (1).png">
     <Grid HorizontalAlignment="Center" Width="1051">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,10,0,0">
             <TextBox Text="0,001" Name="Offset" Margin="5,0,5,0" Width="61" Height="21"/>

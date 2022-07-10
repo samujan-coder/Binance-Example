@@ -56,6 +56,7 @@ namespace Binance_Example
 
         public ObservableCollection<Instrument> SpecialInstruments { get; set; } = new ObservableCollection<Instrument>() { };
 
+        private OrderSync orderSync;
 
 
         private void RealAllSettings()
@@ -197,6 +198,12 @@ namespace Binance_Example
             else LogMessage("Подключились UserStreamAsync", LogTextBox, bot, false);
 
 
+            orderSync = new OrderSync()
+            {
+                startOkay = startOkay,
+                SocketClient = socketClient
+            };
+            orderSync.Start();
 
             // var accountResult = await client.SpotApi.Account.GetAccountInfoAsync();//спотовый рынок 
             var accountResult = await BinanceUsualClient.UsdFuturesApi.Account.GetAccountInfoAsync();//фьючерсный рынок 
@@ -346,7 +353,8 @@ namespace Binance_Example
                         StopPunkts2 = stoppunkts2,
                         TelegramBot = bot,
                         Client = BinanceUsualClient,
-                        N = decimal.Parse(Offset.Text)
+                        N = decimal.Parse(Offset.Text),
+                        OrderUpdate = orderSync,
 
                 };
                     stopbot.LogInitialSettings();

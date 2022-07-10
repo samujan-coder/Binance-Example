@@ -28,7 +28,7 @@ namespace Binance_Example
         /// </summary>
 
         private decimal _stoplevel;
-        public decimal StopLevel { get => Direction == Direction.Buy ? _stoplevel - N : _stoplevel + N; set { _stoplevel = value; } }
+        public decimal StopLevel { get => Direction == Direction.Buy ? _stoplevel + N : _stoplevel - N; set { _stoplevel = value; } }
 
         public decimal Comission { get; set; }
 

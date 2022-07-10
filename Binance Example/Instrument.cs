@@ -51,7 +51,7 @@ namespace Binance_Example
                 var oneinstrument = socketClient.UsdFuturesStreams.SubscribeToTickerUpdatesAsync(Code, data =>
                {
                    LastPrice = data.Data.LastPrice;
-                   Debug.Write("Tick {0}", LastPrice.ToString());
+                   Debug.WriteLine("Tick " + LastPrice.ToString());
 
                }, subscriveforprice).Result;
 

@@ -208,7 +208,7 @@ namespace Binance_Example
         {
 
             if (OrderUpdate != null)
-                OrderUpdate.NewOrder += OnOrderUpdate;
+                OrderUpdate.NewOrder1 += OnOrderUpdate1;
 
             //var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
             //if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ошибка подписки на обновление ордеров", Id), TextLog, TelegramBot);
@@ -229,14 +229,16 @@ namespace Binance_Example
             MainWindow.LogMessage(startText, TextLog, TelegramBot);
         }
 
-      /*  private void OnOrderUpdate (DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate)
+        private void OnOrderUpdate1 (DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate)
         {
             lock (locker)
             {
+                if (orderupdate.Data.UpdateData.OrderId == stoporderid)
+                MainWindow.LogMessage(string.Format("{0} Order Update {1} status {2}", Id, orderupdate.Data.UpdateData.OrderId, orderupdate.Data.UpdateData.Status), TextLog, TelegramBot);
                 CheckOrderCondition(orderupdate.Data.UpdateData.OrderId, orderupdate.Data.UpdateData.Status==OrderStatus.Filled);
             }
             
-        }*/
+        }
 
         private void OnOrderUpdate(BinanceFuturesOrder order)
         {

@@ -18,6 +18,9 @@ namespace Binance_Example
         public delegate void EventNewOrder(BinanceFuturesOrder Order);
         public EventNewOrder NewOrder;
 
+        public delegate void EventNewOrder1(DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate);
+        public EventNewOrder1 NewOrder1;
+
         public BinanceSocketClient SocketClient { get; set; }
 
         public BinanceClient BinanceClient { get; set; }
@@ -28,7 +31,7 @@ namespace Binance_Example
 
         public async void Start()
         {
-            var timer = new Timer(1000);
+           /* var timer = new Timer(1000);
             timer.Elapsed += (s, e) => 
             {
                 try
@@ -50,9 +53,9 @@ namespace Binance_Example
             
             };
 
-            timer.Start();
+            timer.Start();*/
 
-            /*
+            
              var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
              if (!subOkay.Success) Debug.WriteLine("Ошибка подписки на ордера");
 
@@ -81,13 +84,13 @@ namespace Binance_Example
             subOkay.Data.Exception += ex =>
             {
                 Debug.WriteLine("ОШИБКА ордеров СТРАТЕГИЯ *");
-            };*/
+            };
 
         }
 
-        /*private void OnOrderUpdate(DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate)
+        private void OnOrderUpdate(DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate)
         {
-            NewOrder?.Invoke(orderupdate);
-        }*/
+           NewOrder1?.Invoke(orderupdate);
+        }
     }
 }

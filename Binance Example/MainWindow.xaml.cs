@@ -261,9 +261,11 @@ namespace Binance_Example
         /// <param name="e"></param>
         private async void Button_Click_1(object sender, RoutedEventArgs e)
         {
+
+            orderSync = null;
             orderSync = new OrderSync()
             {
-                startOkay = startOkay,
+                //startOkay = startOkay,
                 SocketClient = socketClient,
                 BinanceClient = BinanceUsualClient,
                 Symbol = SelectedInstrument.Code,

@@ -144,8 +144,15 @@ namespace Binance_Example
             try
             {
                 MainWindow.LogMessage(String.Format("{0} Остановка бота, удаление ордеров + Отписка от обновления ордеров", Id), TextLog, TelegramBot);
-                if(OrderUpdate!=null)
-                OrderUpdate.NewOrder -= OnOrderUpdate;
+
+                if (OrderUpdate != null)
+                {
+                    OrderUpdate.NewOrder -= OnOrderUpdate;
+                    OrderUpdate.NewOrder1 -= OnOrderUpdate1;
+
+                }
+
+               
 
                 if (stoporderid == 0) return;
 
@@ -194,21 +201,16 @@ namespace Binance_Example
 
         }
 
-        public async void RestoreOrders()
-        {
-            if (stoporderid != 0)
-            {
-                MainWindow.LogMessage("Насильно проверяю последнее состоянее ордера" + Id, TextLog, TelegramBot);
-               restoredOrder = Client.UsdFuturesApi.CommonFuturesClient.GetOrderAsync(stoporderid.ToString(), Instrument.Code, new System.Threading.CancellationToken()).Result;
-               CheckOrderCondition(decimal.Parse(restoredOrder.Data.Id), restoredOrder.Data.Status ==CommonOrderStatus.Filled);
-            } 
-        }
 
         public async void Start()
         {
 
             if (OrderUpdate != null)
-                OrderUpdate.NewOrder1 += OnOrderUpdate1;
+            {
+                OrderUpdate.NewOrder += OnOrderUpdate;
+                OrderUpdate.NewOrder1 += OnOrderUpdate1; 
+            
+            }
 
             //var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
             //if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ошибка подписки на обновление ордеров", Id), TextLog, TelegramBot);

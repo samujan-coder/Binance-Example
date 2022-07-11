@@ -198,12 +198,7 @@ namespace Binance_Example
             else LogMessage("Подключились UserStreamAsync", LogTextBox, bot, false);
 
 
-            orderSync = new OrderSync()
-            {
-                startOkay = startOkay,
-                SocketClient = socketClient
-            };
-            orderSync.Start();
+          
 
             // var accountResult = await client.SpotApi.Account.GetAccountInfoAsync();//спотовый рынок 
             var accountResult = await BinanceUsualClient.UsdFuturesApi.Account.GetAccountInfoAsync();//фьючерсный рынок 
@@ -266,27 +261,17 @@ namespace Binance_Example
         /// <param name="e"></param>
         private async void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            var entry = true;
-
-            #region
-            /* 
-            if (BuyRadio.IsChecked == true & SellRadio.IsChecked == true)
+            orderSync = new OrderSync()
             {
-                MessageBox.Show("Выбраны два направления, выберите один");
-                return;
-            }
-            if (BuyRadio.IsChecked == false & SellRadio.IsChecked == false)
-            {
-                Debug.WriteLine("Выбран режим входа без входа в рынок");
-                entry = false;
-            }
+                startOkay = startOkay,
+                SocketClient = socketClient,
+                BinanceClient = BinanceUsualClient,
+                Symbol = SelectedInstrument.Code,
 
-            var ordersucess = (await BinanceUsualClient.UsdFuturesApi.Trading.PlaceOrderAsync(Symbol, SellRadio.IsChecked == true ? OrderSide.Sell : OrderSide.Buy, FuturesOrderType.Market, quantity: decimal.Parse(Volume.Text))).Success;
-           
-            */
-            #endregion
+            };
+            orderSync.Start();
 
-            stopStrategies.ToList().ForEach(s => { s.Start(); });
+            stopStrategies.ToList().ForEach(s => { s.OrderUpdate = orderSync; s.Start(); });
 
         }
 
@@ -354,7 +339,7 @@ namespace Binance_Example
                         TelegramBot = bot,
                         Client = BinanceUsualClient,
                         N = decimal.Parse(Offset.Text),
-                        OrderUpdate = orderSync,
+                       
 
                 };
                     stopbot.LogInitialSettings();

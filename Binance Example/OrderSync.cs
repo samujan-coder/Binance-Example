@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures;
+using System.Windows.Controls;
 
 namespace Binance_Example
 {
@@ -27,35 +28,22 @@ namespace Binance_Example
 
         public BinanceClient BinanceClient { get; set; }
 
-      
+        public TextBox TextLog { get; set; }
+
+        public ExtendedTelegram TelegramBot { get; set; }
+
 
         public string Symbol { get; set; }
 
         public async void Start()
         {
-            /* var timer = new Timer(1000);
-             timer.Elapsed += (s, e) => 
+             var timer = new Timer(30000);
+             timer.Elapsed += (s, e) =>
              {
-                 try
-                 {
-                     var i = 0;
-                     var orders = BinanceClient.UsdFuturesApi.Trading.GetOrdersAsync(Symbol).Result.Data;
-                     if (orders != null)
-                         foreach (var order in orders)
-                         {
-                             if (order.Symbol == Symbol && order.Status == OrderStatus.Filled)
-                             {
-                                 //i++;
-                                 //Debug.WriteLine(i+ "{0} {1} {2}", order.Symbol, order.Status, order.Id);
-                                 NewOrder?.Invoke(order);
-                             }
-                         }
-                 }
-                 catch (Exception ex) { Debug.WriteLine(ex.ToString()); }
-
+                 RestoreOrders();
              };
 
-             timer.Start();*/
+           
             var startOkay = await BinanceClient.UsdFuturesApi.Account.StartUserStreamAsync();//фьючерсный 
 
             subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
@@ -77,12 +65,14 @@ namespace Binance_Example
             subOkay.Data.ConnectionRestored += (ex) =>
             {
                 Debug.WriteLine("Соединение восстановлено [стратегия] *" );
+                MainWindow.LogMessage(String.Format("{0} Соединение по ордерам восстановлен", Symbol), TextLog, TelegramBot);
                 RestoreOrders();
 
             };
             subOkay.Data.ConnectionLost += () =>
             {
                 Debug.WriteLine("Потеря соединения [стратегия] *" );
+                MainWindow.LogMessage(String.Format("{0} Потеря соединения по ордерам", Symbol), TextLog, TelegramBot);
             };
 
             subOkay.Data.Exception += ex =>
@@ -90,24 +80,30 @@ namespace Binance_Example
                 Debug.WriteLine("ОШИБКА ордеров СТРАТЕГИЯ *");
             };
 
+            timer.Start();
+
         }
         public async void RestoreOrders()
         {
+            try
+            {
+                MainWindow.LogMessage(String.Format("{0} Насильно проверяю последнее состоянее ордера", Symbol), TextLog, TelegramBot);
+                Debug.WriteLine("Насильно загружаем последние  ордера");
 
-            Debug.WriteLine("Насильно проверяю последнее состоянее ордера");
-
-            var orders = BinanceClient.UsdFuturesApi.Trading.GetOrdersAsync(Symbol).Result.Data;
-            if (orders != null)
-                foreach (var order in orders)
-                {
-                    if (order.Symbol == Symbol && order.Status == OrderStatus.Filled)
+                var orders = BinanceClient.UsdFuturesApi.Trading.GetOrdersAsync(Symbol).Result.Data;
+                if (orders != null)
+                    foreach (var order in orders)
                     {
-                        //i++;
-                        //Debug.WriteLine(i+ "{0} {1} {2}", order.Symbol, order.Status, order.Id);
-                        NewOrder?.Invoke(order);
+                        if (order.Symbol == Symbol && order.Status == OrderStatus.Filled)
+                        {
+                            //i++;
+                            //Debug.WriteLine(i+ "{0} {1} {2}", order.Symbol, order.Status, order.Id);
+                            NewOrder?.Invoke(order);
+                        }
                     }
-                }
+            }
 
+            catch (Exception ex) { MainWindow.LogMessage(String.Format("{0} Ошибка получения ордеров {1}", Symbol,ex.Message), TextLog, TelegramBot); ; }
 
         }
 

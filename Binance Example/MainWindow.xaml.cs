@@ -269,6 +269,8 @@ namespace Binance_Example
                 SocketClient = socketClient,
                 BinanceClient = BinanceUsualClient,
                 Symbol = SelectedInstrument.Code,
+                TextLog = LogTextBox,
+                TelegramBot = bot,
 
             };
             orderSync.Start();
@@ -334,10 +336,11 @@ namespace Binance_Example
                         startOkay = startOkay,
                         Volume = volume,
                         WaitForEntryStop = false,
-                        TextLog = LogTextBox,
+                        
                         Id = i,
                         StopPunkts = StopLevelPoints,
                         StopPunkts2 = stoppunkts2,
+                        TextLog = LogTextBox,
                         TelegramBot = bot,
                         Client = BinanceUsualClient,
                         N = decimal.Parse(Offset.Text),

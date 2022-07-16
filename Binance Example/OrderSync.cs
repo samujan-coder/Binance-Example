@@ -90,7 +90,7 @@ namespace Binance_Example
                 MainWindow.LogMessage(String.Format("{0} Насильно проверяю последнее состоянее ордера", Symbol), TextLog, TelegramBot);
                 Debug.WriteLine("Насильно загружаем последние  ордера");
 
-                var orders = BinanceClient.UsdFuturesApi.Trading.GetOrdersAsync(Symbol).Result.Data;
+                var orders = BinanceClient.UsdFuturesApi.Trading.GetOrdersAsync(Symbol).Result.Data.Where(order => order.Symbol == Symbol && order.Status == OrderStatus.Filled);
                 if (orders != null)
                     foreach (var order in orders)
                     {

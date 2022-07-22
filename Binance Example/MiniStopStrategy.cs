@@ -3,10 +3,13 @@ using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures;
 using Binance.Net.Objects.Models.Futures.Socket;
 using CryptoExchange.Net.CommonObjects;
+using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Sockets;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Telegram.Bot;
@@ -148,12 +151,11 @@ namespace Binance_Example
                 if (OrderUpdate != null)
                 {
                     OrderUpdate.NewOrder -= OnOrderUpdate;
-                    OrderUpdate.NewOrder1 -= OnOrderUpdate1;
+                    //OrderUpdate.NewOrder1 -= OnOrderUpdate1;
 
                 }
 
                
-
                 if (stoporderid == 0) return;
 
                 var subOkay = await Client.UsdFuturesApi.Trading.CancelOrderAsync(Instrument.Code, orderId: stoporderid);
@@ -208,12 +210,15 @@ namespace Binance_Example
             if (OrderUpdate != null)
             {
                 OrderUpdate.NewOrder += OnOrderUpdate;
-                OrderUpdate.NewOrder1 += OnOrderUpdate1; 
-            
             }
 
-            //var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
-            //if (!subOkay.Success) MainWindow.LogMessage(String.Format("{0} Ошибка подписки на обновление ордеров", Id), TextLog, TelegramBot);
+            var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate1, null, new System.Threading.CancellationToken());
+            if (!subOkay.Success) MainWindow.LogMessage(string.Format("{0} Ошибка подписки на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
+            else
+            {
+                SubscribeForErrors(subOkay);
+                MainWindow.LogMessage(string.Format("{0} Успешная подписка на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
+            }
 
             var startText = "";
 
@@ -231,21 +236,65 @@ namespace Binance_Example
             MainWindow.LogMessage(startText, TextLog, TelegramBot);
         }
 
+        private void SubscribeForErrors(CallResult<UpdateSubscription> subOkay)
+        {
+
+            
+            subOkay.Data.ActivityUnpaused += () =>
+            {
+                Debug.WriteLine("Активность возвращена [стратегия] *" );
+                MainWindow.LogMessage(string.Format("{0} Активность возвращена {1}", Id, Instrument.Code), TextLog, TelegramBot);
+                //RestoreOrders();
+            };
+
+            subOkay.Data.ActivityPaused += () =>
+            {
+                Debug.WriteLine("Активность на паузе [стратегия] *" );
+                MainWindow.LogMessage(string.Format("{0} Активность на паузе {1}", Id, Instrument.Code), TextLog, TelegramBot);
+            };
+
+            subOkay.Data.ConnectionRestored += (ex) =>
+            {
+                Debug.WriteLine("Соединение восстановлено [стратегия] *" );
+                MainWindow.LogMessage(string.Format("{0} Соединение восстановлено {1}", Id, Instrument.Code), TextLog, TelegramBot);
+
+
+            };
+            subOkay.Data.ConnectionLost += () =>
+            {
+                Debug.WriteLine("Потеря соединения [стратегия] *" );
+                MainWindow.LogMessage(string.Format("{0} Потеря соединения {1}", Id, Instrument.Code), TextLog, TelegramBot);
+            };
+
+            subOkay.Data.Exception += ex =>
+            {
+                Debug.WriteLine("ОШИБКА ордеров СТРАТЕГИЯ *");
+                MainWindow.LogMessage(string.Format("{0} Ошибка данных {1}", Id, Instrument.Code), TextLog, TelegramBot);
+            };
+            
+        }
+
         private void OnOrderUpdate1 (DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate)
         {
             lock (locker)
             {
                 if (orderupdate.Data.UpdateData.OrderId == stoporderid)
-                MainWindow.LogMessage(string.Format("{0} Order Update {1} status {2}", Id, orderupdate.Data.UpdateData.OrderId, orderupdate.Data.UpdateData.Status), TextLog, TelegramBot);
-                CheckOrderCondition(orderupdate.Data.UpdateData.OrderId, orderupdate.Data.UpdateData.Status==OrderStatus.Filled);
+                {
+                    MainWindow.LogMessage(string.Format("{0} Order Update {1} status {2}", Id, orderupdate.Data.UpdateData.OrderId, orderupdate.Data.UpdateData.Status), TextLog, TelegramBot);
+                    CheckOrderCondition(orderupdate.Data.UpdateData.OrderId, orderupdate.Data.UpdateData.Status == OrderStatus.Filled);
+                }
             }
             
         }
 
-        private void OnOrderUpdate(BinanceFuturesOrder order)
+        private void OnOrderUpdate(List<BinanceFuturesOrder> OrdersList)
         {
             lock (locker)
             {
+                if (stoporderid == 0) return;
+
+                var order = OrdersList.FirstOrDefault(o => o.Id == stoporderid);
+                if(order!=null)
                 CheckOrderCondition(order.Id, order.Status == OrderStatus.Filled);
             }
         }
@@ -311,7 +360,7 @@ namespace Binance_Example
 
         decimal lastprice = 0;
         private CryptoExchange.Net.Objects.WebCallResult<Order> restoredOrder;
-
+     
         ///проверка основных условий 
         private void CheckConditions(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {

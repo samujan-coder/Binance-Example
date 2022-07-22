@@ -16,13 +16,13 @@ namespace Binance_Example
 {
     public class OrderSync
     {
-        public delegate void EventNewOrder(BinanceFuturesOrder Order);
+        public delegate void EventNewOrder(List<BinanceFuturesOrder> OrdersList);
         public EventNewOrder NewOrder;
 
-        public delegate void EventNewOrder1(DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate);
-        public EventNewOrder1 NewOrder1;
+        //public delegate void EventNewOrder1(DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate);
+        //public EventNewOrder1 NewOrder1;
 
-        private CryptoExchange.Net.Objects.CallResult<UpdateSubscription> subOkay;
+        //private CryptoExchange.Net.Objects.CallResult<UpdateSubscription> subOkay;
 
         public BinanceSocketClient SocketClient { get; set; }
 
@@ -31,6 +31,8 @@ namespace Binance_Example
         public TextBox TextLog { get; set; }
 
         public ExtendedTelegram TelegramBot { get; set; }
+
+        public List<BinanceFuturesOrder> OrdersDataBase = new List<BinanceFuturesOrder>() { };
 
 
         public string Symbol { get; set; }
@@ -44,13 +46,13 @@ namespace Binance_Example
              };
 
            
-            var startOkay = await BinanceClient.UsdFuturesApi.Account.StartUserStreamAsync();//фьючерсный 
+            /* var startOkay = await BinanceClient.UsdFuturesApi.Account.StartUserStreamAsync();//фьючерсный 
 
             subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
             if (!subOkay.Success) Debug.WriteLine("Ошибка подписки на ордера");
-            else Debug.WriteLine("успешно подписка!");
+            else Debug.WriteLine("успешно подписка!");*/
 
-
+            /*
             subOkay.Data.ActivityUnpaused += () =>
             {
                 Debug.WriteLine("Активность возвращена [стратегия] *" );
@@ -79,7 +81,7 @@ namespace Binance_Example
             {
                 Debug.WriteLine("ОШИБКА ордеров СТРАТЕГИЯ *");
             };
-
+            */
             timer.Start();
 
         }
@@ -87,30 +89,38 @@ namespace Binance_Example
         {
             try
             {
-                MainWindow.LogMessage(String.Format("{0} Насильно проверяю последнее состоянее ордера", Symbol), TextLog, TelegramBot);
-                Debug.WriteLine("Насильно загружаем последние  ордера");
+               
 
                 var orders = BinanceClient.UsdFuturesApi.Trading.GetOrdersAsync(Symbol).Result.Data.Where(order => order.Symbol == Symbol && order.Status == OrderStatus.Filled);
                 if (orders != null)
+                {
+                    OrdersDataBase.Clear();
                     foreach (var order in orders)
                     {
                         if (order.Symbol == Symbol && order.Status == OrderStatus.Filled)
                         {
                             //i++;
                             //Debug.WriteLine(i+ "{0} {1} {2}", order.Symbol, order.Status, order.Id);
-                            NewOrder?.Invoke(order);
+                            OrdersDataBase.Add(order);
+                           //NewOrder?.Invoke(order);
                         }
                     }
+
+                    if (OrdersDataBase.Count != 0)
+                    {
+                        MainWindow.LogMessage(String.Format("{0} Загружаю последние ордера в базу", Symbol), TextLog, TelegramBot);
+                        Debug.WriteLine("Загружаю последние ордера в базу");
+                        NewOrder?.Invoke(OrdersDataBase);
+                    }
+                }
             }
-
             catch (Exception ex) { MainWindow.LogMessage(String.Format("{0} Ошибка получения ордеров {1}", Symbol,ex.Message), TextLog, TelegramBot); ; }
-
         }
 
-
+        
         private void OnOrderUpdate(DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate)
         {
-           NewOrder1?.Invoke(orderupdate);
+          // NewOrder1?.Invoke(orderupdate);
         }
     }
 }

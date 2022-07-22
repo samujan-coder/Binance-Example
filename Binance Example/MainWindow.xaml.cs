@@ -166,7 +166,7 @@ namespace Binance_Example
             BinanceUsualClient = new BinanceClient(new BinanceClientOptions()
             {
                 ApiCredentials = new ApiCredentials(apiKey, apiSecret),
-                ReceiveWindow = TimeSpan.FromMilliseconds(1000),
+                ReceiveWindow = TimeSpan.FromMilliseconds(2000),
                 LogLevel = LogLevel.Debug,
                 LogWriters = new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox } }
 
@@ -182,7 +182,7 @@ namespace Binance_Example
                 ApiCredentials = new ApiCredentials(apiKey, apiSecret),
                 AutoReconnect =true,
                 ReconnectInterval=TimeSpan.FromSeconds(10),
-                LogLevel=LogLevel.Debug,
+                LogLevel =LogLevel.Debug,
                 LogWriters= new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox} }
 
             }); 

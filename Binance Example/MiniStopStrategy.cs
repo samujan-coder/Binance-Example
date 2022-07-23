@@ -151,11 +151,9 @@ namespace Binance_Example
                 if (OrderUpdate != null)
                 {
                     OrderUpdate.NewOrder -= OnOrderUpdate;
-                    //OrderUpdate.NewOrder1 -= OnOrderUpdate1;
 
                 }
 
-               
                 if (stoporderid == 0) return;
 
                 var subOkay = await Client.UsdFuturesApi.Trading.CancelOrderAsync(Instrument.Code, orderId: stoporderid);
@@ -209,9 +207,10 @@ namespace Binance_Example
 
             if (OrderUpdate != null)
             {
-                OrderUpdate.NewOrder += OnOrderUpdate;
+               OrderUpdate.NewOrder += OnOrderUpdate;
             }
 
+            
             var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate1, null, new System.Threading.CancellationToken());
             if (!subOkay.Success) MainWindow.LogMessage(string.Format("{0} Ошибка подписки на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
             else
@@ -219,9 +218,15 @@ namespace Binance_Example
                 SubscribeForErrors(subOkay);
                 MainWindow.LogMessage(string.Format("{0} Успешная подписка на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
             }
+            
 
+            PlacingInitialOrdeds();
+        }
+
+        private void PlacingInitialOrdeds()
+        {
+            stoporderid = 0;
             var startText = "";
-
             if (!WaitForEntryStop) // классический старт
             {
                 startText = string.Format("{0} Размещаем стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, LevelActivator, StopLevelComission);
@@ -274,6 +279,7 @@ namespace Binance_Example
             
         }
 
+
         private void OnOrderUpdate1 (DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate)
         {
             lock (locker)
@@ -291,11 +297,38 @@ namespace Binance_Example
         {
             lock (locker)
             {
+                //ни один ордер не выставлен
                 if (stoporderid == 0) return;
 
+                //выставлен, с ошибкой
+                if (stoporderid == 1) 
+                {
+                    MainWindow.LogMessage(string.Format("{0} Повторная попытка отправить ордер", Id), TextLog, TelegramBot);
+                    PlacingInitialOrdeds();
+                    return;
+                }
+         
                 var order = OrdersList.FirstOrDefault(o => o.Id == stoporderid);
-                if(order!=null)
-                CheckOrderCondition(order.Id, order.Status == OrderStatus.Filled);
+
+                if(order != null && order.Status == OrderStatus.New)
+                {
+                    MainWindow.LogMessage(string.Format("{0} Состояние ордера NEW! ничего не делаем, ждем", Id), TextLog, TelegramBot);
+                }    
+                if (order != null && order.Status == OrderStatus.Filled)
+                { 
+                    CheckOrderCondition(order.Id, order.Status == OrderStatus.Filled); 
+                }
+                if(order==null)
+                {
+                    MainWindow.LogMessage(string.Format("{0} Не найден отправленный нами ордер NULL", Id), TextLog, TelegramBot);
+                    MainWindow.LogMessage(string.Format("{0} Повторная попытка отправить ордер", Id), TextLog, TelegramBot);
+                    PlacingInitialOrdeds();
+                }
+                if(order!=null && (order.Status==OrderStatus.Canceled || order.Status==OrderStatus.Rejected || order.Status == OrderStatus.Canceled))
+                {
+                    MainWindow.LogMessage(string.Format("{0} Наш ордер отменен или не принят биржей", Id), TextLog, TelegramBot);
+                    PlacingInitialOrdeds();
+                }
             }
         }
 
@@ -346,6 +379,7 @@ namespace Binance_Example
             else
             {
                 MainWindow.LogMessage(string.Format("{0} !Ордер не выставлен! {1} {2} opposite:{3} {4}", Id, Direction, StopLevel, WaitForEntryStop, result.Error.Message), TextLog, TelegramBot, true);
+                stoporderid = 1;
                 //Debug.WriteLine($"Order placing failed: {result.Error.Message}", "Failed", MessageBoxButton.OK, MessageBoxImage.Error); 
             }
 

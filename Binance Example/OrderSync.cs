@@ -36,10 +36,12 @@ namespace Binance_Example
 
 
         public string Symbol { get; set; }
+        public Timer timer { get; private set; }
 
         public async void Start()
         {
-             var timer = new Timer(30000);
+
+             timer = new Timer(5000);//5 сек
              timer.Elapsed += (s, e) =>
              {
                  RestoreOrders();
@@ -85,19 +87,24 @@ namespace Binance_Example
             timer.Start();
 
         }
+
+        public void Stop()
+        {
+            if (timer != null) timer.Stop();
+        }
         public async void RestoreOrders()
         {
             try
             {
                
 
-                var orders = BinanceClient.UsdFuturesApi.Trading.GetOrdersAsync(Symbol).Result.Data.Where(order => order.Symbol == Symbol && order.Status == OrderStatus.Filled);
+                var orders = BinanceClient.UsdFuturesApi.Trading.GetOrdersAsync(Symbol).Result.Data.Where(order => order.Symbol == Symbol);
                 if (orders != null)
                 {
                     OrdersDataBase.Clear();
                     foreach (var order in orders)
                     {
-                        if (order.Symbol == Symbol && order.Status == OrderStatus.Filled)
+                        if (order.Symbol == Symbol /*&& order.Status == OrderStatus.Filled*/)
                         {
                             //i++;
                             //Debug.WriteLine(i+ "{0} {1} {2}", order.Symbol, order.Status, order.Id);

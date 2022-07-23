@@ -234,6 +234,7 @@ namespace Binance_Example
         private async void Cancel_Click(object sender, RoutedEventArgs e)
         {
 
+            if (orderSync != null) orderSync.Stop();
             stopStrategies.ToList().ForEach(s => { s.Stop(); s.StopChild(); });
             stopStrategies.Clear();
         }

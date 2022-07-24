@@ -13,6 +13,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Telegram.Bot;
 using Microsoft.Extensions.Logging;
+using System.Threading;
 
 namespace Binance_Example
 {
@@ -177,6 +178,8 @@ namespace Binance_Example
 
             SubscribeToSymbols();
 
+
+            
             socketClient = new BinanceSocketClient( new BinanceSocketClientOptions()
             {
                 ApiCredentials = new ApiCredentials(apiKey, apiSecret),
@@ -187,6 +190,7 @@ namespace Binance_Example
 
             }); 
 
+           
             //начать стриминг пользовательских данных 
             // var startOkay = await client.SpotApi.Account.StartUserStreamAsync();// спотовый 
             startOkay = await BinanceUsualClient.UsdFuturesApi.Account.StartUserStreamAsync();//фьючерсный 
@@ -214,7 +218,7 @@ namespace Binance_Example
             else
                 MessageBox.Show($"Error requesting account info: {accountResult.Error.Message}", "error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-
+            
         }
 
 
@@ -262,22 +266,26 @@ namespace Binance_Example
         /// <param name="e"></param>
         private async void Button_Click_1(object sender, RoutedEventArgs e)
         {
+          
 
-            orderSync = null;
-            orderSync = new OrderSync()
+                orderSync = null;
+                orderSync = new OrderSync()
+                {
+                    //startOkay = startOkay,
+                    SocketClient = socketClient,
+                    BinanceClient = BinanceUsualClient,
+                    Symbol = SelectedInstrument.Code,
+                    TextLog = LogTextBox,
+                    TelegramBot = bot,
+
+                };
+                orderSync.Start();
+
+            Thread parallel = new Thread(() =>
             {
-                //startOkay = startOkay,
-                SocketClient = socketClient,
-                BinanceClient = BinanceUsualClient,
-                Symbol = SelectedInstrument.Code,
-                TextLog = LogTextBox,
-                TelegramBot = bot,
-
-            };
-            orderSync.Start();
-
-            stopStrategies.ToList().ForEach(s => { s.OrderUpdate = orderSync; s.Start(); });
-
+                stopStrategies.ToList().ForEach(s => { s.OrderUpdate = orderSync; s.apiKey = apiKey; s.apiSecret = apiSecret; s.Start(); });
+            });
+            parallel.Start();
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
@@ -333,7 +341,7 @@ namespace Binance_Example
                     var stopbot = new MiniStopStrategy(direction,
                         SelectedInstrument, stoplevel, comission, algopunkts)
                     {
-                        SocketClient = socketClient,
+                       // SocketClient = socketClient,
                         startOkay = startOkay,
                         Volume = volume,
                         WaitForEntryStop = false,

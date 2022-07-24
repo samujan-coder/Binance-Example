@@ -1,10 +1,13 @@
 ﻿using Binance.Net.Clients;
 using Binance.Net.Enums;
+using Binance.Net.Objects;
 using Binance.Net.Objects.Models.Futures;
 using Binance.Net.Objects.Models.Futures.Socket;
+using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.CommonObjects;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -86,6 +89,9 @@ namespace Binance_Example
 
         public OrderSync OrderUpdate { get; set; }
 
+        public string apiKey;
+        public string apiSecret;
+
 
         /// <summary>
         /// Ожидать стопа, который сработает в другую сторону 
@@ -123,7 +129,7 @@ namespace Binance_Example
         public MiniStopStrategy(MiniStopStrategy miniStopStrategy)
         {
             Instrument = miniStopStrategy.Instrument;
-            SocketClient = miniStopStrategy.SocketClient;
+           // SocketClient = miniStopStrategy.SocketClient;
             Client = miniStopStrategy.Client;
             startOkay = miniStopStrategy.startOkay;
             Volume = miniStopStrategy.Volume;
@@ -205,40 +211,51 @@ namespace Binance_Example
         public async void Start()
         {
 
+            SocketClient = new BinanceSocketClient(new BinanceSocketClientOptions()
+            {
+                ApiCredentials = new ApiCredentials(apiKey, apiSecret),
+                AutoReconnect = true,
+                ReconnectInterval = TimeSpan.FromSeconds(10),
+                LogLevel = LogLevel.Debug,
+               // LogWriters = new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox } }
+
+            });
+           
             if (OrderUpdate != null)
             {
-               OrderUpdate.NewOrder += OnOrderUpdate;
+               //OrderUpdate.NewOrder += OnOrderUpdate;
             }
-
-            
-            var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate1, null, new System.Threading.CancellationToken());
-            if (!subOkay.Success) MainWindow.LogMessage(string.Format("{0} Ошибка подписки на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
-            else
-            {
-                SubscribeForErrors(subOkay);
-                MainWindow.LogMessage(string.Format("{0} Успешная подписка на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
-            }
-            
 
             PlacingInitialOrdeds();
         }
 
-        private void PlacingInitialOrdeds()
+        private  void PlacingInitialOrdeds()
         {
-            stoporderid = 0;
-            var startText = "";
-            if (!WaitForEntryStop) // классический старт
+            lock (locker)
             {
-                startText = string.Format("{0} Размещаем стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, LevelActivator, StopLevelComission);
-                PlaceStopOrderAsync(Direction, Instrument.Code, StopLevelComission, Volume);
+                var subOkay =  SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate1, null, new System.Threading.CancellationToken()).Result;
+                if (!subOkay.Success) MainWindow.LogMessage(string.Format("{0} Ошибка подписки на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
+                else
+                {
+                    SubscribeForErrors(subOkay);
+                    MainWindow.LogMessage(string.Format("{0} Успешная подписка на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
+                }
+
+                stoporderid = 0;
+                var startText = "";
+                if (!WaitForEntryStop) // классический старт
+                {
+                    startText = string.Format("{0} Размещаем стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, LevelActivator, StopLevelComission);
+                    PlaceStopOrderAsync(Direction, Instrument.Code, StopLevelComission, Volume);
+                }
+                else
+                {
+                    var oppositedirection = Direction == Direction.Buy ? Direction.Sell : Direction.Buy;
+                    startText = string.Format("{0} Размещаем стоп {1} цена стопа {2}", Id, oppositedirection, StopLevel);
+                    PlaceStopOrderAsync(oppositedirection, Instrument.Code, StopLevelComission, Volume);
+                }
+                MainWindow.LogMessage(startText, TextLog, TelegramBot);
             }
-            else
-            {
-                var oppositedirection = Direction == Direction.Buy ? Direction.Sell : Direction.Buy;
-                startText = string.Format("{0} Размещаем стоп {1} цена стопа {2}", Id, oppositedirection, StopLevel);
-                PlaceStopOrderAsync(oppositedirection, Instrument.Code, StopLevelComission, Volume);
-            }
-            MainWindow.LogMessage(startText, TextLog, TelegramBot);
         }
 
         private void SubscribeForErrors(CallResult<UpdateSubscription> subOkay)

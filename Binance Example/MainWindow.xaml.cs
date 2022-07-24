@@ -283,7 +283,7 @@ namespace Binance_Example
 
             Thread parallel = new Thread(() =>
             {
-                stopStrategies.ToList().ForEach(s => { s.OrderUpdate = orderSync; s.apiKey = apiKey; s.apiSecret = apiSecret; s.Start(); });
+                //stopStrategies.ToList().ForEach(s => { s.OrderUpdate = orderSync; s.apiKey = apiKey; s.apiSecret = apiSecret; s.Start(); });
             });
             parallel.Start();
         }

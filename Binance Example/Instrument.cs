@@ -55,6 +55,21 @@ namespace Binance_Example
 
                }, subscriveforprice).Result;
 
+
+               var oneinstrument2 =  socketClient.UsdFuturesStreams.SubscribeToOrderBookUpdatesAsync("BTCUSDT",500,data => 
+                {
+
+                    Debug.WriteLine( "Котировки {0} {1}",data.Data.Bids.Count(), data.Data.Bids.Count());
+                   // foreach(var bid in data.Data.Bids) Debug.WriteLine("{0} {1}")
+                    Debug.WriteLine("-----------------------")
+
+                },new CancellationToken());
+
+                if(oneinstrument2.Result.Success)
+                {
+
+                }
+
                 oneinstrument.Data.ActivityUnpaused += () =>
                  {
                      MainWindow.LogMessage("Активность возвращена! " + Code, TextLog, TelegramBot);

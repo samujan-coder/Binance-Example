@@ -129,7 +129,10 @@ namespace Binance_Example
         public MiniStopStrategy(MiniStopStrategy miniStopStrategy)
         {
             Instrument = miniStopStrategy.Instrument;
-           // SocketClient = miniStopStrategy.SocketClient;
+
+            apiKey = miniStopStrategy.apiKey;
+            apiSecret = miniStopStrategy.apiSecret;
+
             Client = miniStopStrategy.Client;
             startOkay = miniStopStrategy.startOkay;
             Volume = miniStopStrategy.Volume;

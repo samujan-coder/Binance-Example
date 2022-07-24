@@ -226,7 +226,7 @@ namespace Binance_Example
            
             if (OrderUpdate != null)
             {
-               //OrderUpdate.NewOrder += OnOrderUpdate;
+               OrderUpdate.NewOrder += OnOrderUpdate;
             }
 
             PlacingInitialOrdeds();

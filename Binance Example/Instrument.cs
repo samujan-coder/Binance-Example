@@ -1,4 +1,6 @@
 ﻿using Binance.Net.Clients;
+using Binance.Net.Objects;
+using Binance.Net.SymbolOrderBooks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -56,16 +58,18 @@ namespace Binance_Example
                }, subscriveforprice).Result;
 
 
-               var oneinstrument2 =  socketClient.UsdFuturesStreams.SubscribeToOrderBookUpdatesAsync("BTCUSDT",500,data => 
+               var oneinstrument2 =  socketClient.UsdFuturesStreams.SubscribeToOrderBookUpdatesAsync("BTCUSDT",100,data => 
                 {
 
                     Debug.WriteLine( "Котировки {0} {1}",data.Data.Bids.Count(), data.Data.Bids.Count());
-                   // foreach(var bid in data.Data.Bids) Debug.WriteLine("{0} {1}")
-                    Debug.WriteLine("-----------------------")
+                   // foreach (var bid in data.Data.Bids) Debug.WriteLine("{0} {1}", bid.Price, bid.Quantity);
+                    Debug.WriteLine("-----------------------");
 
                 },new CancellationToken());
 
-                if(oneinstrument2.Result.Success)
+               // var orderbook = new BinanceFuturesUsdtSymbolOrderBook("BTCUSDT",new BinanceOrderBookOptions() { }
+
+                if (oneinstrument2.Result.Success)
                 {
 
                 }

@@ -251,13 +251,13 @@ namespace Binance_Example
                 if (!WaitForEntryStop) // классический старт
                 {
                     startText = string.Format("{0} Размещаем стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, LevelActivator, StopLevelComission);
-                    PlaceStopOrderAsync(Direction, Instrument.Code, StopLevel, Volume);
+                    PlaceStopOrderAsync(Direction, Instrument.Code, StopLevelN, Volume);
                 }
                 else
                 {
                     var oppositedirection = Direction == Direction.Buy ? Direction.Sell : Direction.Buy;
-                    startText = string.Format("{0} Размещаем стоп {1} цена стопа {2}", Id, oppositedirection, StopLevelComission);
-                    PlaceStopOrderAsync(oppositedirection, Instrument.Code, StopLevelComission, Volume);
+                    startText = string.Format("{0} Размещаем стоп {1} цена стопа {2}", Id, oppositedirection, StopLevel);
+                    PlaceStopOrderAsync(oppositedirection, Instrument.Code, StopLevelN, Volume);
                 }
                 MainWindow.LogMessage(startText, TextLog, TelegramBot);
             }
@@ -375,7 +375,7 @@ namespace Binance_Example
                         MainWindow.LogMessage(string.Format("{0} Исполнился оппозитный стоп! Останавливаем и запускаем новую", Id), TextLog, TelegramBot);
                         Stop();
                         //создаем новую мини стоп бот стратегию, но уже с классическим 
-                        StartChild();
+                        StartChild(false);
 
                     }
                 }

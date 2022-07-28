@@ -57,7 +57,7 @@ namespace Binance_Example
 
                }, subscriveforprice).Result;
 
-
+                /*
                var oneinstrument2 =  socketClient.UsdFuturesStreams.SubscribeToOrderBookUpdatesAsync("BTCUSDT",100,data => 
                 {
 
@@ -72,7 +72,7 @@ namespace Binance_Example
                 if (oneinstrument2.Result.Success)
                 {
 
-                }
+                }*/
 
                 oneinstrument.Data.ActivityUnpaused += () =>
                  {

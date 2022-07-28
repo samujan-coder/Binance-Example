@@ -79,8 +79,8 @@ namespace Binance_Example
         }
 
 
-
-        public async static void LogMessage(string message, TextBox LogTextBox, ExtendedTelegram extendedTelegram, bool error = false)
+       
+        public static async void LogMessage(string message, TextBox LogTextBox, ExtendedTelegram extendedTelegram, bool error = false)
         {
             var logmessage = DateTime.Now + " | " + message;
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -178,6 +178,8 @@ namespace Binance_Example
 
             SubscribeToSymbols();
 
+
+            var result = BinanceUsualClient.UsdFuturesApi.ExchangeData.GetOrderBookAsync("BTCUSDT", 1000, new CancellationToken()).Result;
 
             
             socketClient = new BinanceSocketClient( new BinanceSocketClientOptions()

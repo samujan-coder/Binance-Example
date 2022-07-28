@@ -11,6 +11,8 @@ using System.Timers;
 using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures;
 using System.Windows.Controls;
+using Binance.Net.SymbolOrderBooks;
+using Binance.Net.Objects;
 
 namespace Binance_Example
 {
@@ -47,12 +49,13 @@ namespace Binance_Example
                  RestoreOrders();
              };
 
-           
+
             /* var startOkay = await BinanceClient.UsdFuturesApi.Account.StartUserStreamAsync();//фьючерсный 
 
             subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
             if (!subOkay.Success) Debug.WriteLine("Ошибка подписки на ордера");
             else Debug.WriteLine("успешно подписка!");*/
+
 
             /*
             subOkay.Data.ActivityUnpaused += () =>
@@ -86,6 +89,11 @@ namespace Binance_Example
             */
             timer.Start();
 
+        }
+
+        private void Quote_OnOrderBookUpdate((IEnumerable<CryptoExchange.Net.Interfaces.ISymbolOrderBookEntry> Bids, IEnumerable<CryptoExchange.Net.Interfaces.ISymbolOrderBookEntry> Asks) obj)
+        {
+            Debug.WriteLine("{0} {1}", obj.Bids.Count(), obj.Asks.Count());
         }
 
         public void Stop()

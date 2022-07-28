@@ -19,8 +19,8 @@ namespace Binance_Example
         public delegate void EventNewOrder(List<BinanceFuturesOrder> OrdersList);
         public EventNewOrder NewOrder;
 
-        //public delegate void EventNewOrder1(DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate);
-        //public EventNewOrder1 NewOrder1;
+        public delegate void EventNewOrder1(DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate);
+        public EventNewOrder1 NewOrder1;
 
         //private CryptoExchange.Net.Objects.CallResult<UpdateSubscription> subOkay;
 
@@ -41,18 +41,18 @@ namespace Binance_Example
         public async void Start()
         {
 
-             timer = new Timer(5000);//5 сек
+             timer = new Timer(1200);//1.2 сек
              timer.Elapsed += (s, e) =>
              {
                  RestoreOrders();
              };
 
            
-            /* var startOkay = await BinanceClient.UsdFuturesApi.Account.StartUserStreamAsync();//фьючерсный 
+             var startOkay = await BinanceClient.UsdFuturesApi.Account.StartUserStreamAsync();//фьючерсный 
 
-            subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
+            var subOkay = await SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate, null, new System.Threading.CancellationToken());
             if (!subOkay.Success) Debug.WriteLine("Ошибка подписки на ордера");
-            else Debug.WriteLine("успешно подписка!");*/
+            else Debug.WriteLine("успешно подписка!");
 
             /*
             subOkay.Data.ActivityUnpaused += () =>
@@ -97,7 +97,6 @@ namespace Binance_Example
             try
             {
                
-
                 var orders = BinanceClient.UsdFuturesApi.Trading.GetOrdersAsync(Symbol).Result.Data.Where(order => order.Symbol == Symbol);
                 if (orders != null)
                 {
@@ -115,19 +114,19 @@ namespace Binance_Example
 
                     if (OrdersDataBase.Count != 0)
                     {
-                        MainWindow.LogMessage(String.Format("{0} Загружаю последние ордера в базу", Symbol), TextLog, TelegramBot);
+                        //MainWindow.LogMessage(String.Format("{0} Загружаю последние ордера в базу", Symbol), TextLog, TelegramBot);
                         Debug.WriteLine("Загружаю последние ордера в базу");
                         NewOrder?.Invoke(OrdersDataBase);
                     }
                 }
             }
-            catch (Exception ex) { MainWindow.LogMessage(String.Format("{0} Ошибка получения ордеров {1}", Symbol,ex.Message), TextLog, TelegramBot); ; }
+            catch (Exception ex) { MainWindow.LogMessage(String.Format("{0} Не критично! Ошибка получения ордеров {1}", Symbol,ex.Message), TextLog, TelegramBot); ; }
         }
 
         
         private void OnOrderUpdate(DataEvent<BinanceFuturesStreamOrderUpdate> orderupdate)
         {
-          // NewOrder1?.Invoke(orderupdate);
+           NewOrder1?.Invoke(orderupdate);
         }
     }
 }

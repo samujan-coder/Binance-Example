@@ -93,8 +93,8 @@ namespace Binance_Example
             
             extendedTelegram.telegramBotClient.SendTextMessageAsync(extendedTelegram.TelegramUserKey, message);
 
-            if (error)
-                MessageBox.Show(message, "Ошибка");
+            //if (error)
+               // MessageBox.Show(message, "Ошибка");
 
             }));
         }
@@ -167,9 +167,13 @@ namespace Binance_Example
             BinanceUsualClient = new BinanceClient(new BinanceClientOptions()
             {
                 ApiCredentials = new ApiCredentials(apiKey, apiSecret),
-                ReceiveWindow = TimeSpan.FromMilliseconds(2000),
+                //ReceiveWindow = TimeSpan.FromMilliseconds(2000),
                 LogLevel = LogLevel.Debug,
-                LogWriters = new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox } }
+                LogWriters = new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox },
+              
+               
+                }
+                
 
             });
 
@@ -186,8 +190,9 @@ namespace Binance_Example
                 AutoReconnect =true,
                 ReconnectInterval=TimeSpan.FromSeconds(10),
                 LogLevel =LogLevel.Debug,
-                LogWriters= new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox} }
-
+                LogWriters= new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox} },
+               
+                
             }); 
 
            
@@ -345,7 +350,7 @@ namespace Binance_Example
                         startOkay = startOkay,
                         Volume = volume,
                         WaitForEntryStop = false,
-                        
+                        SocketClient = socketClient,
                         Id = i,
                         StopPunkts = StopLevelPoints,
                         StopPunkts2 = stoppunkts2,

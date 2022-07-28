@@ -34,8 +34,9 @@ namespace Binance_Example
         /// Уровень установки стопа
         /// </summary>
 
-        private decimal _stoplevel;
-        public decimal StopLevel { get => Direction == Direction.Buy ? _stoplevel + N : _stoplevel - N; set { _stoplevel = value; } }
+        public decimal StopLevel { get; set; }
+
+        public decimal StopLevelN { get => Direction == Direction.Buy ? StopLevel + N : StopLevel - N;  }
 
         public decimal Comission { get; set; }
 
@@ -47,7 +48,7 @@ namespace Binance_Example
         /// <summary>
         /// Специальный уровень для нового уже стопа...
         /// </summary>
-        public decimal StopLevelComission { get => Direction == Direction.Sell ? StopLevel - Comission : StopLevel + Comission; }
+        public decimal StopLevelComission { get => Direction == Direction.Sell ? StopLevel - Comission : StopLevel + Comission ; }
         //public BinanceClient BinanceClient { get; set; }
         public BinanceSocketClient SocketClient { get; set; }
         public BinanceClient Client { get; set; }
@@ -130,8 +131,7 @@ namespace Binance_Example
         {
             Instrument = miniStopStrategy.Instrument;
 
-            apiKey = miniStopStrategy.apiKey;
-            apiSecret = miniStopStrategy.apiSecret;
+            SocketClient = miniStopStrategy.SocketClient;
 
             Client = miniStopStrategy.Client;
             startOkay = miniStopStrategy.startOkay;
@@ -160,6 +160,7 @@ namespace Binance_Example
                 if (OrderUpdate != null)
                 {
                     OrderUpdate.NewOrder -= OnOrderUpdate;
+                    OrderUpdate.NewOrder1 -= OnOrderUpdate1;
 
                 }
 
@@ -203,7 +204,7 @@ namespace Binance_Example
             }
             else
             {
-                childbot.StopLevel = StopLevel;
+                childbot.StopLevel = StopLevelComission;
             }
 
             childbot.Start();
@@ -214,7 +215,7 @@ namespace Binance_Example
         public async void Start()
         {
 
-            SocketClient = new BinanceSocketClient(new BinanceSocketClientOptions()
+           /* SocketClient = new BinanceSocketClient(new BinanceSocketClientOptions()
             {
                 ApiCredentials = new ApiCredentials(apiKey, apiSecret),
                 AutoReconnect = true,
@@ -222,11 +223,12 @@ namespace Binance_Example
                 LogLevel = LogLevel.Debug,
                // LogWriters = new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox } }
 
-            });
+            });*/
            
             if (OrderUpdate != null)
             {
                OrderUpdate.NewOrder += OnOrderUpdate;
+                OrderUpdate.NewOrder1 += OnOrderUpdate1;
             }
 
             PlacingInitialOrdeds();
@@ -236,25 +238,25 @@ namespace Binance_Example
         {
             lock (locker)
             {
-                var subOkay =  SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate1, null, new System.Threading.CancellationToken()).Result;
+                /* var subOkay =  SocketClient.UsdFuturesStreams.SubscribeToUserDataUpdatesAsync(startOkay.Data, null, null, null, OnOrderUpdate1, null, new System.Threading.CancellationToken()).Result;
                 if (!subOkay.Success) MainWindow.LogMessage(string.Format("{0} Ошибка подписки на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
                 else
                 {
                     SubscribeForErrors(subOkay);
                     MainWindow.LogMessage(string.Format("{0} Успешная подписка на ордера {1}", Id, Instrument.Code), TextLog, TelegramBot);
-                }
+                }*/
 
                 stoporderid = 0;
                 var startText = "";
                 if (!WaitForEntryStop) // классический старт
                 {
                     startText = string.Format("{0} Размещаем стоп {1} цена стопа {2} цена условия {3} противоположный стоп {4}", Id, Direction, StopLevel, LevelActivator, StopLevelComission);
-                    PlaceStopOrderAsync(Direction, Instrument.Code, StopLevelComission, Volume);
+                    PlaceStopOrderAsync(Direction, Instrument.Code, StopLevel, Volume);
                 }
                 else
                 {
                     var oppositedirection = Direction == Direction.Buy ? Direction.Sell : Direction.Buy;
-                    startText = string.Format("{0} Размещаем стоп {1} цена стопа {2}", Id, oppositedirection, StopLevel);
+                    startText = string.Format("{0} Размещаем стоп {1} цена стопа {2}", Id, oppositedirection, StopLevelComission);
                     PlaceStopOrderAsync(oppositedirection, Instrument.Code, StopLevelComission, Volume);
                 }
                 MainWindow.LogMessage(startText, TextLog, TelegramBot);
@@ -332,7 +334,7 @@ namespace Binance_Example
 
                 if(order != null && order.Status == OrderStatus.New)
                 {
-                    MainWindow.LogMessage(string.Format("{0} Состояние ордера NEW! ничего не делаем, ждем", Id), TextLog, TelegramBot);
+                    //MainWindow.LogMessage(string.Format("{0} Состояние ордера NEW! ничего не делаем, ждем", Id), TextLog, TelegramBot);
                 }    
                 if (order != null && order.Status == OrderStatus.Filled)
                 { 
@@ -384,8 +386,7 @@ namespace Binance_Example
 
         public async Task PlaceStopOrderAsync(Direction direction, string code, decimal stopprice, decimal volume)
         {
-            StopLevel = stopprice;
-
+            //StopLevel = stopprice;
 
             var result = await Client.UsdFuturesApi.Trading.PlaceOrderAsync(code, direction == Direction.Buy ? OrderSide.Buy : OrderSide.Sell, FuturesOrderType.StopMarket, volume, stopPrice: stopprice, timeInForce: TimeInForce.GoodTillCanceled);
 
@@ -398,7 +399,7 @@ namespace Binance_Example
             }
             else
             {
-                MainWindow.LogMessage(string.Format("{0} !Ордер не выставлен! {1} {2} opposite:{3} {4}", Id, Direction, StopLevel, WaitForEntryStop, result.Error.Message), TextLog, TelegramBot, true);
+                MainWindow.LogMessage(string.Format("{0} !Ордер не выставлен! {1} {2} opposite:{3} {4}", Id, Direction, stopprice, WaitForEntryStop, result.Error.Message), TextLog, TelegramBot, true);
                 stoporderid = 1;
                 //Debug.WriteLine($"Order placing failed: {result.Error.Message}", "Failed", MessageBoxButton.OK, MessageBoxImage.Error); 
             }

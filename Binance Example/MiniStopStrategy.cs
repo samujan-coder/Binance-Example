@@ -48,7 +48,7 @@ namespace Binance_Example
         /// <summary>
         /// Специальный уровень для нового уже стопа...
         /// </summary>
-        public decimal StopLevelComission { get => Direction == Direction.Sell ? StopLevel - Comission : StopLevel + Comission ; }
+        public decimal StopLevelComission { get => Direction == Direction.Sell ? StopLevelN - Comission : StopLevelN + Comission ; }
         //public BinanceClient BinanceClient { get; set; }
         public BinanceSocketClient SocketClient { get; set; }
         public BinanceClient Client { get; set; }

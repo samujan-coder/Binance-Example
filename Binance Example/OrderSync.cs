@@ -41,7 +41,7 @@ namespace Binance_Example
         public async void Start()
         {
 
-             timer = new Timer(1200);//1.2 сек
+             timer = new Timer(5000);//3 сек
              timer.Elapsed += (s, e) =>
              {
                  RestoreOrders();

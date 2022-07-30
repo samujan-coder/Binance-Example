@@ -57,11 +57,13 @@ namespace Binance_Example
 
                }, subscriveforprice).Result;
 
-                /*
+               
+
                var oneinstrument2 =  socketClient.UsdFuturesStreams.SubscribeToOrderBookUpdatesAsync("BTCUSDT",100,data => 
                 {
-
-                    Debug.WriteLine( "Котировки {0} {1}",data.Data.Bids.Count(), data.Data.Bids.Count());
+                    var originaldata = data.OriginalData;
+                    Debug.WriteLine(originaldata);
+                    //Debug.WriteLine("Котировки {0} {1} id first = {2} id last = {3}", data.Data.Bids.Count(), data.Data.Bids.Count(), data.Data.FirstUpdateId, data.Data.LastUpdateId);
                    // foreach (var bid in data.Data.Bids) Debug.WriteLine("{0} {1}", bid.Price, bid.Quantity);
                     Debug.WriteLine("-----------------------");
 
@@ -72,7 +74,7 @@ namespace Binance_Example
                 if (oneinstrument2.Result.Success)
                 {
 
-                }*/
+                }
 
                 oneinstrument.Data.ActivityUnpaused += () =>
                  {

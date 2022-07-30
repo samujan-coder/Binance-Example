@@ -170,7 +170,7 @@ namespace Binance_Example
                 ReceiveWindow = TimeSpan.FromMilliseconds(2000),
                 LogLevel = LogLevel.Debug,
                 LogWriters = new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox } }
-
+                
             });
 
             BinanceUsualClient.SetApiCredentials(new ApiCredentials(apiKey, apiSecret) { });
@@ -179,7 +179,7 @@ namespace Binance_Example
             SubscribeToSymbols();
 
 
-            var result = BinanceUsualClient.UsdFuturesApi.ExchangeData.GetOrderBookAsync("BTCUSDT", 1000, new CancellationToken()).Result;
+           // var result = BinanceUsualClient.UsdFuturesApi.ExchangeData.GetOrderBookAsync("BTCUSDT", 5000, new CancellationToken()).Result;
 
             
             socketClient = new BinanceSocketClient( new BinanceSocketClientOptions()
@@ -188,8 +188,12 @@ namespace Binance_Example
                 AutoReconnect =true,
                 ReconnectInterval=TimeSpan.FromSeconds(10),
                 LogLevel =LogLevel.Debug,
-                LogWriters= new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox} }
-
+                OutputOriginalData= true,
+                LogWriters= new List<ILogger>() { new BinanceLogger() { TelegramBot = bot, TextLog = LogTextBox},
+         
+                
+                }
+               
             }); 
 
            
